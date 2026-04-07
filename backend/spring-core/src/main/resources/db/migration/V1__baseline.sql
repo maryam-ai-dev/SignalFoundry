@@ -1,0 +1,1 @@
+-- Flyway baseline migration — confirms Flyway runs against the core schema.

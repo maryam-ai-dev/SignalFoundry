@@ -10,3 +10,20 @@ management:
 spring:
   application:
     name: spring-core
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5433/signalfoundry}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: core
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas:
+      - core
+    default-schema: core
