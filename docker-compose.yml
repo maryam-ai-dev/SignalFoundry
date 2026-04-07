@@ -18,6 +18,20 @@ services:
       timeout: 5s
       retries: 5
 
+  spring:
+    build: ./backend/spring-core
+    container_name: signalfoundry-spring
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/signalfoundry
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     container_name: signalfoundry-redis
