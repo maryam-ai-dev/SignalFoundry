@@ -1,0 +1,31 @@
+# Java / Spring Boot
+target/
+*.class
+*.jar
+*.war
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project docs (local only)
+CLAUDE.md
+sprint-plan.md
