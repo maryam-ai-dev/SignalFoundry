@@ -32,10 +32,11 @@ def extract_pain_points(comments: list[NormalizedComment]) -> list[PainCluster]:
 
     raw_items: list[dict] = []
 
-    # Batch 20 comments per LLM call
-    for i in range(0, len(comments), 20):
-        batch = comments[i : i + 20]
-        text_block = "\n---\n".join(c.text[:300] for c in batch)
+    # Batch 50 comments per LLM call, max 3 batches (= max 3 LLM calls)
+    sampled = comments[:150]
+    for i in range(0, len(sampled), 50):
+        batch = sampled[i : i + 50]
+        text_block = "\n---\n".join(c.text[:200] for c in batch)
         response = complete(_SYSTEM_PROMPT, text_block, max_tokens=800)
         parsed = _parse_json_array(response)
         raw_items.extend(parsed)

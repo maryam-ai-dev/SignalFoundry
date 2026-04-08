@@ -39,12 +39,24 @@ def run_analysis_task(payload: dict) -> dict:
         # Product context passed through payload from orchestrator
         product_context = payload.get("product_context", {})
 
+        # Trend detection is pure computation — no LLM needed
         trend_clusters = detect_trends(posts)
-        narrative_clusters = build_narrative_clusters(posts, embeddings)
-        pain_clusters = extract_pain_points(comments)
-        objection_clusters = extract_objections(comments)
-        belief_gaps = find_belief_gaps(comments, product_context)
-        language_map = extract_language_patterns(comments)
+
+        # Run all LLM-dependent engines in parallel
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        futures = {}
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            futures["narratives"] = pool.submit(build_narrative_clusters, posts, embeddings)
+            futures["pain"] = pool.submit(extract_pain_points, comments)
+            futures["objections"] = pool.submit(extract_objections, comments)
+            futures["belief_gaps"] = pool.submit(find_belief_gaps, comments, product_context)
+            futures["language"] = pool.submit(extract_language_patterns, comments)
+
+        narrative_clusters = futures["narratives"].result()
+        pain_clusters = futures["pain"].result()
+        objection_clusters = futures["objections"].result()
+        belief_gaps = futures["belief_gaps"].result()
+        language_map = futures["language"].result()
 
         result = {
             "trend_clusters": [tc.model_dump() for tc in trend_clusters],
