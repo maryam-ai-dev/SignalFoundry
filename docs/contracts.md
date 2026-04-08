@@ -106,3 +106,35 @@ Request to generate comment drafts for an engagement opportunity.
 
 **Python:** `app.contracts.generation.CommentDraftResult`
 **Java:** `com.marketingtool.shared.dto.GenerationContracts.CommentDraftResult`
+
+---
+
+## Voice
+
+### AnalyzeVoiceSampleRequest
+
+Request to analyse a writing sample for voice stylometry.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| workspace_id / workspaceId | string | required | |
+| sample_type / sampleType | string | required | TEXT or AUDIO |
+| content | string? | null | Text content (when sample_type = TEXT) |
+| file_path / filePath | string? | null | File path (when sample_type = AUDIO) |
+
+**Python:** `app.contracts.voice.AnalyzeVoiceSampleRequest`
+**Java:** `com.marketingtool.shared.dto.VoiceContracts.AnalyzeVoiceSampleRequest`
+
+### VoiceSampleAnalysisResult
+
+Result of voice sample analysis.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| features | dict | required | Extracted style feature vector |
+| quality_score / qualityScore | float | required | 0.0–1.0 |
+| is_sufficient / isSufficient | bool | required | Whether sample meets minimum quality |
+| word_count / wordCount | int | required | |
+
+**Python:** `app.contracts.voice.VoiceSampleAnalysisResult`
+**Java:** `com.marketingtool.shared.dto.VoiceContracts.VoiceSampleAnalysisResult`
