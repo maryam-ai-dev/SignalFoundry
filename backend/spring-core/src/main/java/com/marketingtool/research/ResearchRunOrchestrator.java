@@ -1,6 +1,8 @@
 package com.marketingtool.research;
 
 import com.marketingtool.shared.config.FastApiClient;
+import com.marketingtool.workspace.Workspace;
+import com.marketingtool.workspace.WorkspaceRepository;
 import com.marketingtool.workflow.JobRun;
 import com.marketingtool.workflow.JobRunService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ public class ResearchRunOrchestrator {
     private final ResearchRunService researchRunService;
     private final JobRunService jobRunService;
     private final FastApiClient fastApiClient;
+    private final WorkspaceRepository workspaceRepository;
 
     @Transactional
     public ResearchRun startScan(UUID workspaceId, String queryText, List<String> platforms,
@@ -39,6 +42,16 @@ public class ResearchRunOrchestrator {
         if (goalContext != null) {
             payload.put("goal_context", goalContext);
         }
+
+        // Include workspace product context for analysis engines
+        workspaceRepository.findById(workspaceId).ifPresent(ws -> {
+            Map<String, Object> ctx = new HashMap<>();
+            ctx.put("productName", ws.getProductName() != null ? ws.getProductName() : "");
+            ctx.put("productDescription", ws.getProductDescription() != null ? ws.getProductDescription() : "");
+            ctx.put("keyThemes", ws.getKeyThemes() != null ? ws.getKeyThemes() : List.of());
+            payload.put("product_context", ctx);
+        });
+
         JobRun job = jobRunService.createJob("RESEARCH_SCAN", payload, run.getId());
         payload.put("job_id", job.getId().toString());
 

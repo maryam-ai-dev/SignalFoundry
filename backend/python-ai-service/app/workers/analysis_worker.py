@@ -6,6 +6,8 @@ from sqlalchemy import text
 
 from app.analysis.narratives.narrative_engine import build_narrative_clusters
 from app.analysis.trends.trend_engine import detect_trends
+from app.audience.belief_gap.belief_gap_engine import find_belief_gaps
+from app.audience.language.language_engine import extract_language_patterns
 from app.audience.objections.objection_engine import extract_objections
 from app.audience.pain.pain_engine import extract_pain_points
 from app.normalization.models import NormalizedComment, NormalizedPost
@@ -34,22 +36,29 @@ def run_analysis_task(payload: dict) -> dict:
         comments = _fetch_comments_for_posts(post_canonical_ids)
         logger.info("Analysis: loaded %d comments", len(comments))
 
+        # Product context passed through payload from orchestrator
+        product_context = payload.get("product_context", {})
+
         trend_clusters = detect_trends(posts)
         narrative_clusters = build_narrative_clusters(posts, embeddings)
         pain_clusters = extract_pain_points(comments)
         objection_clusters = extract_objections(comments)
+        belief_gaps = find_belief_gaps(comments, product_context)
+        language_map = extract_language_patterns(comments)
 
         result = {
             "trend_clusters": [tc.model_dump() for tc in trend_clusters],
             "narrative_clusters": [nc.model_dump() for nc in narrative_clusters],
             "pain_clusters": [pc.model_dump() for pc in pain_clusters],
             "objection_clusters": [oc.model_dump() for oc in objection_clusters],
+            "belief_gaps": [bg.model_dump() for bg in belief_gaps],
+            "language_map": language_map.model_dump(),
         }
 
         logger.info(
-            "Analysis complete: %d trends, %d narratives, %d pain, %d objections",
+            "Analysis complete: %d trends, %d narratives, %d pain, %d objections, %d belief_gaps",
             len(trend_clusters), len(narrative_clusters),
-            len(pain_clusters), len(objection_clusters),
+            len(pain_clusters), len(objection_clusters), len(belief_gaps),
         )
 
         # Send analysis callback (finalStage=false — generation still coming)
