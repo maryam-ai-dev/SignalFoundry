@@ -15,6 +15,13 @@ import java.util.UUID;
 public class ScheduledRefreshController {
 
     private final ScheduledRefreshRepository refreshRepository;
+    private final ScheduledRefreshWorker refreshWorker;
+
+    @PostMapping("/trigger")
+    public Map<String, Object> triggerNow() {
+        int dispatched = refreshWorker.runDueRefreshes();
+        return Map.of("dispatched", dispatched);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
