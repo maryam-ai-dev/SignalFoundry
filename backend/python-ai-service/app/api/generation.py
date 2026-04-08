@@ -81,6 +81,8 @@ class GenerateCommentRequest(BaseModel):
     post_context: dict
     workspace_context: dict = {}
     goal_context: dict | None = None
+    voice_profile_vector: dict | None = None
+    voice_profile_maturity: float = 0.0
 
 
 @router.post("/internal/generation/comment")
@@ -89,6 +91,8 @@ async def comment_endpoint(body: GenerateCommentRequest):
         post_context=body.post_context,
         workspace_context=body.workspace_context,
         goal_context=body.goal_context,
+        voice_profile_vector=body.voice_profile_vector,
+        voice_profile_maturity=body.voice_profile_maturity,
     )
     return {"drafts": drafts}
 

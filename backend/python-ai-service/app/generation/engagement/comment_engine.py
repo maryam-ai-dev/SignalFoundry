@@ -26,6 +26,8 @@ def generate_comments(
     post_context: dict,
     workspace_context: dict,
     goal_context: dict | None = None,
+    voice_profile_vector: dict | None = None,
+    voice_profile_maturity: float = 0.0,
 ) -> list[dict]:
     post_text = post_context.get("post_text", "")
     top_comments = post_context.get("top_comments", [])
@@ -64,12 +66,35 @@ def generate_comments(
             if phrase in text_lower:
                 risk_flags.append(f"contains generic phrase: '{phrase}'")
 
-        results.append({
+        draft = {
             "text": text,
             "strategy_type": strategy,
             "risk_flags": risk_flags,
             "duplicate_risk": 0.0,
-        })
+            "voice_match_score": None,
+            "confidence_level": None,
+        }
+
+        # Voice matching if profile provided
+        if voice_profile_vector and text:
+            try:
+                from app.voice.matching.voice_matcher import compute_match
+                from app.voice.confidence.confidence_engine import compute_confidence
+                from app.voice.stylometry.models import StyleFeatureVector
+
+                profile = StyleFeatureVector.from_features(voice_profile_vector, 0)
+                match_result = compute_match(text, profile)
+                confidence = compute_confidence(match_result.match_score, voice_profile_maturity)
+
+                draft["voice_match_score"] = match_result.match_score
+                draft["confidence_level"] = confidence["level"]
+
+                if confidence["requires_review"]:
+                    draft["risk_flags"].append("voice drift detected — review recommended")
+            except Exception as e:
+                logger.warning("Voice matching failed: %s", e)
+
+        results.append(draft)
 
     return results
 
