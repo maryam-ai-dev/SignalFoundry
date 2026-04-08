@@ -19,3 +19,4 @@ feedparser
 trafilatura
 spacy
 playwright
+TikTokApi
