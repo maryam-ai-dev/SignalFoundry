@@ -27,3 +27,8 @@ spring:
     schemas:
       - core
     default-schema: core
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:signalfoundry-dev-secret-key-at-least-32-bytes!}
+    expiration-hours: 24

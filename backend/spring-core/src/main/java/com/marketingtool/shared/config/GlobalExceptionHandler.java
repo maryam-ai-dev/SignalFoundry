@@ -1,5 +1,6 @@
 package com.marketingtool.shared.config;
 
+import com.marketingtool.shared.security.AuthService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,26 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AuthService.AuthenticationException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthFailed(AuthService.AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "error", true,
+                        "message", ex.getMessage(),
+                        "timestamp", Instant.now().toString()
+                ));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "error", true,
+                        "message", ex.getMessage() != null ? ex.getMessage() : "Bad request",
+                        "timestamp", Instant.now().toString()
+                ));
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(EntityNotFoundException ex) {
