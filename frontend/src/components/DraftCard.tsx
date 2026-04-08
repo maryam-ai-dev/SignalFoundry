@@ -108,13 +108,20 @@ export default function DraftCard({
             </button>
             <button
               onClick={handleApprove}
-              className="rounded bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400 hover:bg-green-500/30 transition-colors"
+              disabled={requiresEdit}
+              className="rounded bg-green-500/20 px-2 py-1 text-xs font-medium text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Approve
             </button>
           </div>
         )}
       </div>
+
+      {requiresEdit && !isApproved && !isRejected && (
+        <p className="rounded-md bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-400">
+          Edit before approving — voice confidence too low
+        </p>
+      )}
 
       <textarea
         value={text}
