@@ -32,6 +32,18 @@ public class SwipeFileEntry {
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> content;
 
+    @Column(name = "campaign_objective_id")
+    private UUID campaignObjectiveId;
+
+    @Column(name = "tags", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private java.util.List<String> tags;
+
+    private String platform;
+
+    @Column(name = "source_run_id")
+    private UUID sourceRunId;
+
     @Column(nullable = false)
     private boolean saved = true;
 

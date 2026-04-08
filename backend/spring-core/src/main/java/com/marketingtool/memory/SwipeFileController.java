@@ -23,16 +23,34 @@ public class SwipeFileController {
         entry.setWorkspaceId(req.workspaceId());
         entry.setType(req.type());
         entry.setContent(req.content());
+        entry.setTags(req.tags());
+        entry.setPlatform(req.platform());
+        entry.setSourceRunId(req.sourceRunId());
+        entry.setCampaignObjectiveId(req.campaignObjectiveId());
         entry = swipeRepository.save(entry);
         return toMap(entry);
     }
 
     @GetMapping
     public List<Map<String, Object>> list(@RequestParam UUID workspaceId,
-                                           @RequestParam(required = false) String type) {
+                                           @RequestParam(required = false) String type,
+                                           @RequestParam(required = false) String tag,
+                                           @RequestParam(required = false) UUID campaignObjectiveId) {
         List<SwipeFileEntry> entries = (type != null && !type.isBlank())
                 ? swipeRepository.findByWorkspaceIdAndTypeAndArchivedFalse(workspaceId, type)
                 : swipeRepository.findByWorkspaceIdAndArchivedFalse(workspaceId);
+
+        if (tag != null && !tag.isBlank()) {
+            entries = entries.stream()
+                    .filter(e -> e.getTags() != null && e.getTags().contains(tag))
+                    .toList();
+        }
+        if (campaignObjectiveId != null) {
+            entries = entries.stream()
+                    .filter(e -> campaignObjectiveId.equals(e.getCampaignObjectiveId()))
+                    .toList();
+        }
+
         return entries.stream().map(this::toMap).toList();
     }
 
@@ -46,16 +64,23 @@ public class SwipeFileController {
     }
 
     private Map<String, Object> toMap(SwipeFileEntry e) {
-        return Map.of(
-                "id", e.getId(),
-                "workspaceId", e.getWorkspaceId(),
-                "type", e.getType(),
-                "content", e.getContent() != null ? e.getContent() : Map.of(),
-                "saved", e.isSaved(),
-                "archived", e.isArchived(),
-                "createdAt", e.getCreatedAt().toString()
-        );
+        var map = new java.util.HashMap<String, Object>();
+        map.put("id", e.getId());
+        map.put("workspaceId", e.getWorkspaceId());
+        map.put("type", e.getType());
+        map.put("content", e.getContent() != null ? e.getContent() : Map.of());
+        map.put("tags", e.getTags() != null ? e.getTags() : List.of());
+        map.put("platform", e.getPlatform());
+        map.put("sourceRunId", e.getSourceRunId());
+        map.put("campaignObjectiveId", e.getCampaignObjectiveId());
+        map.put("saved", e.isSaved());
+        map.put("archived", e.isArchived());
+        map.put("createdAt", e.getCreatedAt().toString());
+        return map;
     }
 
-    public record CreateSwipeRequest(UUID workspaceId, String type, Map<String, Object> content) {}
+    public record CreateSwipeRequest(
+        UUID workspaceId, String type, Map<String, Object> content,
+        List<String> tags, String platform, UUID sourceRunId, UUID campaignObjectiveId
+    ) {}
 }
