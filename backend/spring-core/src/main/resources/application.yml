@@ -27,6 +27,7 @@ spring:
     schemas:
       - core
     default-schema: core
+    out-of-order: true
 
 app:
   jwt:
