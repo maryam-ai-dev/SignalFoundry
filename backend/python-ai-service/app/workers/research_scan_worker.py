@@ -5,9 +5,11 @@ import httpx
 
 from app.connectors.product_hunt_connector import ProductHuntConnector
 from app.connectors.reddit_connector import RedditConnector
+from app.connectors.x_connector import XConnector
 from app.connectors.youtube_connector import YouTubeConnector
 from app.normalization.product_hunt_mapper import map_post as map_ph_post, map_comment as map_ph_comment
 from app.normalization.reddit_mapper import map_post as map_reddit_post, map_comment as map_reddit_comment
+from app.normalization.x_mapper import map_post as map_x_post
 from app.normalization.youtube_mapper import map_video, map_comment as map_yt_comment
 from app.normalization.storage import save_posts, save_comments
 from app.shared.database import SessionLocal
@@ -82,6 +84,13 @@ def run_research_scan(payload: dict) -> dict:
                 if ph_cid:
                     ph_comments = [map_ph_comment(rc, ph_cid) for rc in raw_comments]
                     all_comments.extend(ph_comments)
+
+        if "x" in platforms:
+            x_connector = XConnector()
+            raw_x = x_connector.search_posts(query_text, window_days=3, limit=25)
+            logger.info("X returned %d posts for query '%s'", len(raw_x), query_text)
+            x_posts = [map_x_post(rp, workspace_id) for rp in raw_x]
+            all_posts.extend(x_posts)
 
         # Store to intel schema
         with SessionLocal() as session:
