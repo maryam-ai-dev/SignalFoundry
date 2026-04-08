@@ -4,7 +4,9 @@ import os
 import httpx
 
 from app.connectors.reddit_connector import RedditConnector
-from app.normalization.reddit_mapper import map_post, map_comment
+from app.connectors.youtube_connector import YouTubeConnector
+from app.normalization.reddit_mapper import map_post as map_reddit_post, map_comment as map_reddit_comment
+from app.normalization.youtube_mapper import map_video, map_comment as map_yt_comment
 from app.normalization.storage import save_posts, save_comments
 from app.shared.database import SessionLocal
 from app.workers.celery_app import celery_app
@@ -37,17 +39,32 @@ def run_research_scan(payload: dict) -> dict:
             raw_posts = connector.search_posts(query_text, window_days=7, limit=50)
             logger.info("Reddit returned %d posts for query '%s'", len(raw_posts), query_text)
 
-            posts = [map_post(rp, workspace_id) for rp in raw_posts]
+            posts = [map_reddit_post(rp, workspace_id) for rp in raw_posts]
             all_posts.extend(posts)
 
-            # Fetch comments for top 10 posts by score
             top_posts = sorted(raw_posts, key=lambda p: p.get("score", 0), reverse=True)[:10]
             for rp in top_posts:
                 raw_comments = connector.fetch_comments(rp["source_post_id"], limit=50)
                 post_cid = posts[raw_posts.index(rp)].canonical_id if rp in raw_posts else ""
                 if post_cid:
-                    comments = [map_comment(rc, post_cid) for rc in raw_comments]
+                    comments = [map_reddit_comment(rc, post_cid) for rc in raw_comments]
                     all_comments.extend(comments)
+
+        if "youtube" in platforms:
+            yt_connector = YouTubeConnector()
+            raw_videos = yt_connector.search_posts(query_text, window_days=7, limit=25)
+            logger.info("YouTube returned %d videos for query '%s'", len(raw_videos), query_text)
+
+            videos = [map_video(rv, workspace_id) for rv in raw_videos]
+            all_posts.extend(videos)
+
+            top_videos = sorted(raw_videos, key=lambda v: v.get("score", 0), reverse=True)[:5]
+            for rv in top_videos:
+                raw_comments = yt_connector.fetch_comments(rv["source_post_id"], limit=30)
+                vid_cid = videos[raw_videos.index(rv)].canonical_id if rv in raw_videos else ""
+                if vid_cid:
+                    yt_comments = [map_yt_comment(rc, vid_cid) for rc in raw_comments]
+                    all_comments.extend(yt_comments)
 
         # Store to intel schema
         with SessionLocal() as session:
