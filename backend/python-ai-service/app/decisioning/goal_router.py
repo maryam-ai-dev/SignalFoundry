@@ -26,5 +26,29 @@ def get_config(mode: str, goal_context: dict | None = None) -> DecisioningConfig
     return _CAMPAIGN_CONFIGS.get(goal_type, _GENERAL_CONFIG)
 
 
-# Campaign-specific configs added in Sprint 13.7
-_CAMPAIGN_CONFIGS: dict[str, DecisioningConfig] = {}
+_CAMPAIGN_CONFIGS: dict[str, DecisioningConfig] = {
+    "BETA_USER_ACQUISITION": DecisioningConfig(
+        relevance_weight=0.5, recency_weight=0.3, discussion_weight=0.2,
+        priority_signal_types=["PAIN", "OBJECTION"],
+    ),
+    "WAITLIST_GROWTH": DecisioningConfig(
+        relevance_weight=0.5, recency_weight=0.3, discussion_weight=0.2,
+        priority_signal_types=["PAIN", "BELIEF_GAP"],
+    ),
+    "AWARENESS": DecisioningConfig(
+        relevance_weight=0.3, recency_weight=0.4, discussion_weight=0.3,
+        priority_signal_types=["NARRATIVE"],
+    ),
+    "CREATOR_RECRUITMENT": DecisioningConfig(
+        relevance_weight=0.4, recency_weight=0.3, discussion_weight=0.3,
+        priority_signal_types=["LANGUAGE", "NARRATIVE"],
+    ),
+    "OBJECTION_TESTING": DecisioningConfig(
+        relevance_weight=0.3, recency_weight=0.2, discussion_weight=0.5,
+        priority_signal_types=["OBJECTION"],
+    ),
+    "FEATURE_VALIDATION": DecisioningConfig(
+        relevance_weight=0.5, recency_weight=0.2, discussion_weight=0.3,
+        priority_signal_types=["PAIN", "BELIEF_GAP"],
+    ),
+}
