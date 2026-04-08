@@ -4,6 +4,9 @@ import redis
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from app.shared.database import SessionLocal
 
 app = FastAPI(title="python-ai-service", version="0.1.0")
 
@@ -31,6 +34,14 @@ async def health():
 
 @app.get("/internal/status")
 async def internal_status():
+    db_status = "error"
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+            db_status = "ok"
+    except Exception:
+        pass
+
     redis_status = "error"
     try:
         r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
@@ -38,4 +49,5 @@ async def internal_status():
             redis_status = "ok"
     except Exception:
         pass
-    return {"db": "pending", "redis": redis_status}
+
+    return {"db": db_status, "redis": redis_status}
