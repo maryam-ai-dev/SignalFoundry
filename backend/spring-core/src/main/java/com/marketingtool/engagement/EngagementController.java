@@ -1,6 +1,9 @@
 package com.marketingtool.engagement;
 
+import com.marketingtool.shared.config.FastApiClient;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -15,6 +18,7 @@ public class EngagementController {
 
     private final CommentOpportunityRepository opportunityRepository;
     private final CommentDraftRepository draftRepository;
+    private final EngagementService engagementService;
 
     @GetMapping("/opportunities")
     public List<Map<String, Object>> listOpportunities(
@@ -44,6 +48,48 @@ public class EngagementController {
     public List<Map<String, Object>> listDrafts(@RequestParam UUID opportunityId) {
         return draftRepository.findByOpportunityId(opportunityId)
                 .stream().map(this::draftToMap).toList();
+    }
+
+    @PostMapping("/opportunities/{id}/generate-draft")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<Map<String, Object>> generateDraft(@PathVariable UUID id) {
+        CommentOpportunity opp = opportunityRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Opportunity not found: " + id));
+
+        // Create 3 stub drafts (real generation via FastAPI wired later)
+        List<Map<String, String>> strategies = List.of(
+                Map.of("type", "INSIGHTFUL", "text", "Stub insightful draft for: " + opp.getPostSummary()),
+                Map.of("type", "EMPATHETIC", "text", "Stub empathetic draft for: " + opp.getPostSummary()),
+                Map.of("type", "FOUNDER_PERSPECTIVE", "text", "Stub founder draft for: " + opp.getPostSummary())
+        );
+
+        List<CommentDraft> drafts = strategies.stream().map(s -> {
+            CommentDraft draft = new CommentDraft();
+            draft.setOpportunityId(opp.getId());
+            draft.setWorkspaceId(opp.getWorkspaceId());
+            draft.setDraftText(s.get("text"));
+            draft.setStrategyType(s.get("type"));
+            draft.setRiskFlags(List.of());
+            return draftRepository.save(draft);
+        }).toList();
+
+        return drafts.stream().map(this::draftToMap).toList();
+    }
+
+    @PostMapping("/drafts/{id}/approve")
+    public Map<String, Object> approveDraft(@PathVariable UUID id) {
+        return draftToMap(engagementService.approveDraft(id));
+    }
+
+    @PostMapping("/drafts/{id}/reject")
+    public Map<String, Object> rejectDraft(@PathVariable UUID id) {
+        return draftToMap(engagementService.rejectDraft(id));
+    }
+
+    @PutMapping("/drafts/{id}/edit")
+    public Map<String, Object> editDraft(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        String editedText = body.getOrDefault("editedText", "");
+        return draftToMap(engagementService.editDraft(id, editedText));
     }
 
     private Map<String, Object> oppToMap(CommentOpportunity o) {
