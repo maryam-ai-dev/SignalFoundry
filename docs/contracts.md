@@ -54,3 +54,55 @@ Result returned after a scan completes.
 
 **Python:** `app.contracts.research.ResearchScanResult`
 **Java:** `com.marketingtool.shared.dto.ResearchContracts.ResearchScanResult`
+
+---
+
+## Generation
+
+### GenerateHooksRequest
+
+Request to generate hook suggestions from scan data.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| workspace_id / workspaceId | string | required | |
+| topic | string | required | |
+| pain_clusters / painClusters | list[dict] | [] | |
+| narrative_clusters / narrativeClusters | list[dict] | [] | |
+| goal_context / goalContext | GoalContext? | null | |
+| voice_profile_id / voiceProfileId | string? | null | |
+
+**Python:** `app.contracts.generation.GenerateHooksRequest`
+**Java:** `com.marketingtool.shared.dto.GenerationContracts.GenerateHooksRequest`
+
+### HookGenerationResult
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| hooks | list[dict] | required | |
+
+**Python:** `app.contracts.generation.HookGenerationResult`
+**Java:** `com.marketingtool.shared.dto.GenerationContracts.HookGenerationResult`
+
+### GenerateCommentDraftRequest
+
+Request to generate comment drafts for an engagement opportunity.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| workspace_id / workspaceId | string | required | |
+| post_context / postContext | dict | required | |
+| voice_profile_id / voiceProfileId | string? | null | |
+| goal_context / goalContext | GoalContext? | null | |
+
+**Python:** `app.contracts.generation.GenerateCommentDraftRequest`
+**Java:** `com.marketingtool.shared.dto.GenerationContracts.GenerateCommentDraftRequest`
+
+### CommentDraftResult
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| drafts | list[dict] | required | |
+
+**Python:** `app.contracts.generation.CommentDraftResult`
+**Java:** `com.marketingtool.shared.dto.GenerationContracts.CommentDraftResult`
