@@ -35,6 +35,36 @@ public class StrategyController {
         return profileToMap(profile);
     }
 
+    @PostMapping("/hooks/{id}/save")
+    public Map<String, Object> saveHook(@PathVariable UUID id) {
+        return hookToMap(strategyService.saveHook(id));
+    }
+
+    @PostMapping("/hooks/{id}/archive")
+    public Map<String, Object> archiveHook(@PathVariable UUID id) {
+        return hookToMap(strategyService.archiveHook(id));
+    }
+
+    @PostMapping("/hooks/{id}/regenerate")
+    public Map<String, Object> regenerateHook(@PathVariable UUID id) {
+        return hookToMap(strategyService.regenerateHook(id));
+    }
+
+    @PostMapping("/angles/{id}/save")
+    public Map<String, Object> saveAngle(@PathVariable UUID id) {
+        return angleToMap(strategyService.saveAngle(id));
+    }
+
+    @PostMapping("/angles/{id}/archive")
+    public Map<String, Object> archiveAngle(@PathVariable UUID id) {
+        return angleToMap(strategyService.archiveAngle(id));
+    }
+
+    @PostMapping("/angles/{id}/regenerate")
+    public Map<String, Object> regenerateAngle(@PathVariable UUID id) {
+        return angleToMap(strategyService.regenerateAngle(id));
+    }
+
     private Map<String, Object> hookToMap(HookSuggestion h) {
         return Map.of(
                 "id", h.getId(),
