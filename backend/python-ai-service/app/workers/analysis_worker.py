@@ -6,7 +6,9 @@ from sqlalchemy import text
 
 from app.analysis.narratives.narrative_engine import build_narrative_clusters
 from app.analysis.trends.trend_engine import detect_trends
-from app.normalization.models import NormalizedPost
+from app.audience.objections.objection_engine import extract_objections
+from app.audience.pain.pain_engine import extract_pain_points
+from app.normalization.models import NormalizedComment, NormalizedPost
 from app.shared.database import SessionLocal
 from app.workers.celery_app import celery_app
 
@@ -28,17 +30,26 @@ def run_analysis_task(payload: dict) -> dict:
         posts, embeddings = _fetch_posts_with_embeddings(post_canonical_ids)
         logger.info("Analysis: loaded %d posts with embeddings", len(posts))
 
+        # Fetch comments for these posts
+        comments = _fetch_comments_for_posts(post_canonical_ids)
+        logger.info("Analysis: loaded %d comments", len(comments))
+
         trend_clusters = detect_trends(posts)
         narrative_clusters = build_narrative_clusters(posts, embeddings)
+        pain_clusters = extract_pain_points(comments)
+        objection_clusters = extract_objections(comments)
 
         result = {
             "trend_clusters": [tc.model_dump() for tc in trend_clusters],
             "narrative_clusters": [nc.model_dump() for nc in narrative_clusters],
+            "pain_clusters": [pc.model_dump() for pc in pain_clusters],
+            "objection_clusters": [oc.model_dump() for oc in objection_clusters],
         }
 
         logger.info(
-            "Analysis complete: %d trends, %d narratives",
+            "Analysis complete: %d trends, %d narratives, %d pain, %d objections",
             len(trend_clusters), len(narrative_clusters),
+            len(pain_clusters), len(objection_clusters),
         )
 
         # Send analysis callback (finalStage=false — generation still coming)
@@ -108,6 +119,39 @@ def _fetch_posts_with_embeddings(canonical_ids: list[str]):
         embeddings.append((r.canonical_id, vec))
 
     return posts, embeddings
+
+
+def _fetch_comments_for_posts(post_canonical_ids: list[str]) -> list[NormalizedComment]:
+    """Fetch comments linked to the given posts."""
+    if not post_canonical_ids:
+        return []
+
+    from datetime import datetime, timezone
+
+    placeholders = ",".join(f":id{i}" for i in range(len(post_canonical_ids)))
+    params = {f"id{i}": cid for i, cid in enumerate(post_canonical_ids)}
+
+    with SessionLocal() as session:
+        rows = session.execute(
+            text(
+                f"SELECT canonical_id, source_platform, source_comment_id, post_canonical_id, "
+                f"author_handle, text, created_at, score, depth "
+                f"FROM intel.normalized_comments "
+                f"WHERE post_canonical_id IN ({placeholders})"
+            ),
+            params,
+        ).fetchall()
+
+    return [
+        NormalizedComment(
+            canonical_id=r.canonical_id, source_platform=r.source_platform,
+            source_comment_id=r.source_comment_id, post_canonical_id=r.post_canonical_id,
+            author_handle=r.author_handle, text=r.text,
+            created_at=r.created_at or datetime.now(timezone.utc),
+            score=r.score or 0, depth=r.depth or 0,
+        )
+        for r in rows
+    ]
 
 
 def _fire_stub_generation_callback(job_id: str | None):

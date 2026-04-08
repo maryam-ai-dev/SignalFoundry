@@ -58,7 +58,31 @@ public class InsightPersistenceService {
             }
         }
 
+        count += persistListType(runId, result, "pain_clusters", "PAIN");
+        count += persistListType(runId, result, "objection_clusters", "OBJECTION");
+        count += persistListType(runId, result, "belief_gaps", "BELIEF_GAP");
+
         log.info("Persisted {} insight snapshots for run {}", count, runId);
+    }
+
+    private int persistListType(UUID runId, Map<String, Object> result, String key, String type) {
+        Object items = result.get(key);
+        int count = 0;
+        if (items instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    InsightSnapshot snapshot = new InsightSnapshot();
+                    snapshot.setRunId(runId);
+                    snapshot.setType(type);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> payload = (Map<String, Object>) map;
+                    snapshot.setPayload(payload);
+                    insightRepository.save(snapshot);
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     private double extractConfidence(Map<String, Object> payload, String key) {
