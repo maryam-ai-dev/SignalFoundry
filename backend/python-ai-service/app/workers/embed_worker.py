@@ -23,6 +23,7 @@ def embed_posts_task(post_canonical_ids: list[str], payload: dict | None = None)
                 "workspace_id": payload.get("workspace_id"),
                 "post_canonical_ids": post_canonical_ids,
                 "product_context": payload.get("product_context", {}),
+                "query_text": payload.get("query_text", ""),
             }
             run_analysis_task.delay(analysis_payload)
 

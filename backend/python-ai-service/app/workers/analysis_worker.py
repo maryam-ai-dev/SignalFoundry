@@ -82,8 +82,14 @@ def run_analysis_task(payload: dict) -> dict:
             )
 
         # Dispatch generation task
-        # TODO: Wire real generation worker in Phase 8. For now, fire stub generation callback.
-        _fire_stub_generation_callback(job_id)
+        from app.workers.generation_worker import run_generation_task
+        gen_payload = {
+            "job_id": job_id,
+            "analysis_results": result,
+            "workspace_context": product_context,
+            "topic": payload.get("query_text", ""),
+        }
+        run_generation_task.delay(gen_payload)
 
         return result
 
@@ -175,15 +181,3 @@ def _fetch_comments_for_posts(post_canonical_ids: list[str]) -> list[NormalizedC
     ]
 
 
-def _fire_stub_generation_callback(job_id: str | None):
-    """Temporary: fire generation callback until real generation worker exists."""
-    if not job_id:
-        return
-    try:
-        httpx.post(
-            f"{SPRING_URL}/api/internal/jobs/{job_id}/complete",
-            json={"stage": "generation", "finalStage": True, "result": {}},
-            timeout=10,
-        )
-    except Exception as exc:
-        logger.warning("Stub generation callback failed for job %s: %s", job_id, exc)
