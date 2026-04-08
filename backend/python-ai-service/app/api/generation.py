@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.generation.angles.angle_engine import generate_angles
 from app.generation.hooks.hook_engine import generate_hooks
 
 router = APIRouter()
@@ -23,3 +24,20 @@ async def hooks_endpoint(body: GenerateHooksRequest):
         goal_context=body.goal_context,
     )
     return {"hooks": hooks}
+
+
+class GenerateAnglesRequest(BaseModel):
+    workspace_id: str
+    topic: str
+    signals: dict = {}
+    workspace_context: dict = {}
+
+
+@router.post("/internal/generation/angles")
+async def angles_endpoint(body: GenerateAnglesRequest):
+    angles = generate_angles(
+        topic=body.topic,
+        signals=body.signals,
+        workspace_context=body.workspace_context,
+    )
+    return {"angles": angles}
