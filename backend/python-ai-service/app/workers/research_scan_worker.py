@@ -56,10 +56,15 @@ def run_research_scan(payload: dict) -> dict:
 
         logger.info("Stored %d posts, %d comments for job %s", post_count, comment_count, job_id)
 
-        # Scan stage complete — do NOT call Spring complete callback.
-        # The chain continues to embed → analysis → generation in later phases.
-        # For now, fire analysis+generation callbacks so the round-trip completes.
-        # TODO: Remove these stub callbacks once embed/analysis/generation workers are wired.
+        # Chain to embed worker
+        canonical_ids = [p.canonical_id for p in all_posts]
+        if canonical_ids:
+            from app.workers.embed_worker import embed_posts_task
+            embed_posts_task.delay(canonical_ids)
+            logger.info("Dispatched embed_posts_task for %d posts", len(canonical_ids))
+
+        # Fire stub callbacks until analysis/generation workers are wired (Phase 6+)
+        # TODO: Remove once real analysis/generation workers chain from embed
         _fire_stub_callbacks(job_id)
 
         return {
