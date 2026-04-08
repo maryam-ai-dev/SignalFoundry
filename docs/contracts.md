@@ -138,3 +138,16 @@ Result of voice sample analysis.
 
 **Python:** `app.contracts.voice.VoiceSampleAnalysisResult`
 **Java:** `com.marketingtool.shared.dto.VoiceContracts.VoiceSampleAnalysisResult`
+
+---
+
+## GoalContext Usage
+
+`GoalContext` is accepted as an optional field on the following contracts. When a campaign is ACTIVE, Spring auto-populates it from campaign fields.
+
+| Contract | Field | Notes |
+|---|---|---|
+| RunResearchScanRequest | goal_context | Auto-attached from active campaign |
+| GenerateHooksRequest | goal_context | Influences hook tone and CTA style |
+| GenerateAnglesRequest | goal_context | Shapes angle direction toward campaign goal |
+| GenerateCommentDraftRequest | goal_context | Guides comment strategy toward campaign intent |

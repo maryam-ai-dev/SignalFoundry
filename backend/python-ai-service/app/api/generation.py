@@ -35,6 +35,7 @@ class GenerateAnglesRequest(BaseModel):
     topic: str
     signals: dict = {}
     workspace_context: dict = {}
+    goal_context: dict | None = None
 
 
 @router.post("/internal/generation/angles")
@@ -43,6 +44,7 @@ async def angles_endpoint(body: GenerateAnglesRequest):
         topic=body.topic,
         signals=body.signals,
         workspace_context=body.workspace_context,
+        goal_context=body.goal_context,
     )
     return {"angles": angles}
 

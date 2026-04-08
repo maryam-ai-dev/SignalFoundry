@@ -22,6 +22,7 @@ def generate_angles(
     topic: str,
     signals: dict | None = None,
     workspace_context: dict | None = None,
+    goal_context: dict | None = None,
 ) -> list[dict]:
     signals = signals or {}
     workspace_context = workspace_context or {}
@@ -49,7 +50,11 @@ def generate_angles(
             f"Themes: {', '.join(workspace_context.get('keyThemes', []))}"
         )
 
-    user_prompt = f"Topic: {topic}\n{signal_block}\n{context_block}".strip()
+    goal_block = ""
+    if goal_context:
+        goal_block = f"Campaign goal: {goal_context.get('goal_type', '')} targeting {goal_context.get('target_audience', 'general')}"
+
+    user_prompt = f"Topic: {topic}\n{signal_block}\n{context_block}\n{goal_block}".strip()
 
     response = complete(_SYSTEM_PROMPT, user_prompt, max_tokens=1200)
     angles = _parse_json_array(response)
