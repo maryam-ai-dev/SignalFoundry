@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.generation.angles.angle_engine import generate_angles
 from app.generation.engagement.comment_engine import generate_comments
+from app.generation.engagement.reply_engine import generate_replies
 from app.generation.hooks.hook_engine import generate_hooks
 from app.generation.platform.platform_engine import adapt_for_platform
 from app.generation.synthesis.synthesis_engine import synthesize
@@ -90,3 +91,19 @@ async def comment_endpoint(body: GenerateCommentRequest):
         goal_context=body.goal_context,
     )
     return {"drafts": drafts}
+
+
+class GenerateReplyRequest(BaseModel):
+    incoming_comment: str
+    post_context: dict = {}
+    workspace_context: dict = {}
+
+
+@router.post("/internal/generation/reply")
+async def reply_endpoint(body: GenerateReplyRequest):
+    replies = generate_replies(
+        incoming_comment=body.incoming_comment,
+        post_context=body.post_context,
+        workspace_context=body.workspace_context,
+    )
+    return {"replies": replies}
