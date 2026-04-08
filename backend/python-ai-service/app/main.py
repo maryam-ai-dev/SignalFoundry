@@ -1,3 +1,6 @@
+import os
+
+import redis
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -28,4 +31,11 @@ async def health():
 
 @app.get("/internal/status")
 async def internal_status():
-    return {"db": "pending", "redis": "pending"}
+    redis_status = "error"
+    try:
+        r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+        if r.ping():
+            redis_status = "ok"
+    except Exception:
+        pass
+    return {"db": "pending", "redis": redis_status}
