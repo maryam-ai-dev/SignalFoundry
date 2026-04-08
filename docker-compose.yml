@@ -32,6 +32,19 @@ services:
       postgres:
         condition: service_healthy
 
+  fastapi:
+    build: ./backend/python-ai-service
+    container_name: signalfoundry-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/signalfoundry
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     container_name: signalfoundry-redis
