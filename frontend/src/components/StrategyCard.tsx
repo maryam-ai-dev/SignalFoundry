@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import VoiceMatchBadge from "./VoiceMatchBadge";
 
 interface Props {
   id: string;
@@ -10,6 +11,7 @@ interface Props {
   secondaryText?: string;
   confidence: number;
   saved: boolean;
+  voiceScore?: number | null;
   onSave: () => Promise<void>;
   onArchive: () => Promise<void>;
   onRegenerate?: () => Promise<void>;
@@ -40,6 +42,7 @@ export default function StrategyCard({
   secondaryText,
   confidence,
   saved: initialSaved,
+  voiceScore,
   onSave,
   onArchive,
   onRegenerate,
@@ -79,6 +82,7 @@ export default function StrategyCard({
             {typeLabel}
           </span>
           <span className={`h-2 w-2 rounded-full ${confidenceColor(confidence)}`} />
+          <VoiceMatchBadge score={voiceScore ?? null} />
         </div>
         <div className="flex items-center gap-1">
           {onRegenerate && (
