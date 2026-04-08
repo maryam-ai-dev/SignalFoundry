@@ -12,3 +12,4 @@ httpx
 praw
 sentence-transformers
 openai
+scikit-learn
