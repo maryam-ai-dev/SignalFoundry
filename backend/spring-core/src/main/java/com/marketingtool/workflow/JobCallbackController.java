@@ -38,8 +38,10 @@ public class JobCallbackController {
                 }
             }
             case "generation" -> {
-                strategyPersistenceService.persist(payload.result());
                 if (researchRunId != null) {
+                    var run = researchRunService.findById(researchRunId);
+                    strategyPersistenceService.persistFromGenerationResult(
+                            researchRunId, run.getWorkspaceId(), payload.result());
                     researchRunService.markCompleted(researchRunId);
                 }
             }
