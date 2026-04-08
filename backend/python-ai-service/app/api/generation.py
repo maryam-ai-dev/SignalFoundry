@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.generation.angles.angle_engine import generate_angles
+from app.generation.engagement.comment_engine import generate_comments
 from app.generation.hooks.hook_engine import generate_hooks
 from app.generation.platform.platform_engine import adapt_for_platform
 from app.generation.synthesis.synthesis_engine import synthesize
@@ -72,3 +73,20 @@ class PlatformAdaptRequest(BaseModel):
 async def platform_adapt_endpoint(body: PlatformAdaptRequest):
     results = [adapt_for_platform(body.idea, p) for p in body.platforms]
     return {"adaptations": results}
+
+
+class GenerateCommentRequest(BaseModel):
+    workspace_id: str
+    post_context: dict
+    workspace_context: dict = {}
+    goal_context: dict | None = None
+
+
+@router.post("/internal/generation/comment")
+async def comment_endpoint(body: GenerateCommentRequest):
+    drafts = generate_comments(
+        post_context=body.post_context,
+        workspace_context=body.workspace_context,
+        goal_context=body.goal_context,
+    )
+    return {"drafts": drafts}
