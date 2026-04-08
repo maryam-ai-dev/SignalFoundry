@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.generation.angles.angle_engine import generate_angles
 from app.generation.hooks.hook_engine import generate_hooks
+from app.generation.platform.platform_engine import adapt_for_platform
 from app.generation.synthesis.synthesis_engine import synthesize
 
 router = APIRouter()
@@ -60,3 +61,14 @@ async def synthesis_endpoint(body: SynthesizeRequest):
         workspace_context=body.workspace_context,
     )
     return result.model_dump()
+
+
+class PlatformAdaptRequest(BaseModel):
+    idea: str
+    platforms: list[str] = ["linkedin", "x", "reddit"]
+
+
+@router.post("/internal/generation/platform-adapt")
+async def platform_adapt_endpoint(body: PlatformAdaptRequest):
+    results = [adapt_for_platform(body.idea, p) for p in body.platforms]
+    return {"adaptations": results}
