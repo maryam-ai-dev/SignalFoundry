@@ -1,5 +1,7 @@
 package com.marketingtool.shared.config;
 
+import com.marketingtool.engagement.ExpiredOpportunityException;
+import com.marketingtool.engagement.RequiresEditException;
 import com.marketingtool.research.DuplicateRunException;
 import com.marketingtool.research.InvalidStateException;
 import com.marketingtool.shared.security.AuthService;
@@ -18,6 +20,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthService.AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthFailed(AuthService.AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "error", true,
+                        "message", ex.getMessage(),
+                        "timestamp", Instant.now().toString()
+                ));
+    }
+
+    @ExceptionHandler({ExpiredOpportunityException.class, RequiresEditException.class})
+    public ResponseEntity<Map<String, Object>> handleUnprocessable(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(Map.of(
                         "error", true,
                         "message", ex.getMessage(),
