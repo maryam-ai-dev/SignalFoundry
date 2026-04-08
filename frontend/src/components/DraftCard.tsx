@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import GoalFitBadge from "./GoalFitBadge";
 import VoiceMatchBadge from "./VoiceMatchBadge";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   riskFlags: string[];
   requiresEdit: boolean;
   voiceScore?: number | null;
+  goalFitScore?: number | null;
   onApprove: () => Promise<void>;
   onReject: () => Promise<void>;
   onEdit: (text: string) => Promise<void>;
@@ -32,6 +34,7 @@ export default function DraftCard({
   riskFlags,
   requiresEdit,
   voiceScore,
+  goalFitScore,
   onApprove,
   onReject,
   onEdit,
@@ -84,6 +87,7 @@ export default function DraftCard({
             {strategyType.replace("_", " ")}
           </span>
           <VoiceMatchBadge score={voiceScore ?? null} />
+          <GoalFitBadge score={goalFitScore ?? null} />
           {isApproved && (
             <span className="rounded bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-400">
               Approved

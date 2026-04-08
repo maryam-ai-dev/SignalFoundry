@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GoalFitBadge from "./GoalFitBadge";
 
 interface Props {
   type: string;
@@ -8,6 +9,7 @@ interface Props {
   summary: string;
   confidence: number;
   sourceCount?: number;
+  goalFitScore?: number | null;
   onSave?: () => void;
 }
 
@@ -32,6 +34,7 @@ export default function InsightCard({
   summary,
   confidence,
   sourceCount,
+  goalFitScore,
   onSave,
 }: Props) {
   const [saved, setSaved] = useState(false);
@@ -59,6 +62,7 @@ export default function InsightCard({
               {sourceCount} sources
             </span>
           )}
+          <GoalFitBadge score={goalFitScore ?? null} />
         </div>
         <button
           onClick={handleSave}

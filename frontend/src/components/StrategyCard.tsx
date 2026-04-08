@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import GoalFitBadge from "./GoalFitBadge";
 import VoiceMatchBadge from "./VoiceMatchBadge";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   confidence: number;
   saved: boolean;
   voiceScore?: number | null;
+  goalFitScore?: number | null;
   onSave: () => Promise<void>;
   onArchive: () => Promise<void>;
   onRegenerate?: () => Promise<void>;
@@ -43,6 +45,7 @@ export default function StrategyCard({
   confidence,
   saved: initialSaved,
   voiceScore,
+  goalFitScore,
   onSave,
   onArchive,
   onRegenerate,
@@ -83,6 +86,7 @@ export default function StrategyCard({
           </span>
           <span className={`h-2 w-2 rounded-full ${confidenceColor(confidence)}`} />
           <VoiceMatchBadge score={voiceScore ?? null} />
+          <GoalFitBadge score={goalFitScore ?? null} />
         </div>
         <div className="flex items-center gap-1">
           {onRegenerate && (
