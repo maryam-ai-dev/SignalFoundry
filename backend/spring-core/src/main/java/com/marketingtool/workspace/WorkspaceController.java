@@ -1,5 +1,6 @@
 package com.marketingtool.workspace;
 
+import com.marketingtool.shared.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,12 +18,11 @@ public class WorkspaceController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> create(@RequestBody CreateWorkspaceRequest req) {
-        // Temporarily use a hardcoded userId until auth is wired in Sprint 2.5+
-        UUID tempUserId = req.userId();
+    public Map<String, Object> create(@RequestBody CreateWorkspaceRequest req,
+                                      @CurrentUser UUID userId) {
         Workspace ws = workspaceService.create(
                 req.name(), req.productName(), req.productDescription(),
-                req.keyThemes(), tempUserId);
+                req.keyThemes(), userId);
         return workspaceToMap(ws);
     }
 
@@ -64,7 +64,6 @@ public class WorkspaceController {
         String name,
         String productName,
         String productDescription,
-        List<String> keyThemes,
-        UUID userId
+        List<String> keyThemes
     ) {}
 }
