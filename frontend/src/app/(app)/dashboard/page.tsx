@@ -28,6 +28,13 @@ interface VoiceProfile {
   maturityScore: number;
 }
 
+interface Campaign {
+  name: string;
+  goalType: string;
+  targetAudience: string;
+  ctaStyle: string;
+}
+
 export default function DashboardPage() {
   const { authenticated } = useRequireAuth();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
@@ -37,6 +44,7 @@ export default function DashboardPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [savedHooks, setSavedHooks] = useState<SwipeEntry[]>([]);
   const [voice, setVoice] = useState<VoiceProfile | null>(null);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -81,6 +89,19 @@ export default function DashboardPage() {
       if (v.confidenceState) setVoice(v);
     } catch {}
 
+    // Active campaign
+    try {
+      const cRes = await apiFetch(`/api/campaigns?workspaceId=${workspaceId}`);
+      const campaigns = await cRes.json();
+      if (Array.isArray(campaigns)) {
+        const active = campaigns.find((c: any) => c.status === "ACTIVE");
+        setCampaign(active ? {
+          name: active.name, goalType: active.goalType,
+          targetAudience: active.targetAudience || "", ctaStyle: active.ctaStyle || "",
+        } : null);
+      }
+    } catch {}
+
     setLastUpdated(new Date());
     setLoading(false);
   }
@@ -107,6 +128,63 @@ export default function DashboardPage() {
           {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
+
+      {/* Campaign Banner */}
+      {campaign && (
+        <div
+          className="rounded-lg p-4 space-y-1"
+          style={{
+            border: "1px solid transparent",
+            backgroundImage: "linear-gradient(var(--bg-panel), var(--bg-panel)), var(--rainbow)",
+            backgroundOrigin: "border-box",
+            backgroundClip: "padding-box, border-box",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-white">{campaign.name}</span>
+            <span className="rounded bg-[--bg-secondary] px-2 py-0.5 text-[10px] text-[--text-muted]">
+              {campaign.goalType.replace(/_/g, " ")}
+            </span>
+          </div>
+          <div className="flex gap-4 text-xs text-[--text-secondary]">
+            {campaign.targetAudience && <span>Audience: {campaign.targetAudience}</span>}
+            {campaign.ctaStyle && <span>CTA: {campaign.ctaStyle}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Campaign-specific priority widgets */}
+      {campaign && (
+        <div className="grid grid-cols-2 gap-4">
+          <DashCard title="Best Opportunities for Goal">
+            {opportunities.length === 0 ? <Empty /> : (
+              opportunities.slice(0, 3).map((o, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="rounded bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-blue-400">{o.platform}</span>
+                  <p className="flex-1 text-xs text-[--text-secondary] line-clamp-1">{o.postSummary?.slice(0, 50)}</p>
+                  <div className="h-1 w-12 rounded-full bg-[--bg-base]">
+                    <div className="h-1 rounded-full bg-green-400" style={{ width: `${Math.round(o.relevanceScore * 100)}%` }} />
+                  </div>
+                </div>
+              ))
+            )}
+          </DashCard>
+          <DashCard title="Objections Blocking Your Goal">
+            {objections.length === 0 ? <Empty /> : (
+              objections.slice(0, 3).map((o, i) => (
+                <div key={i} className="space-y-1">
+                  <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-amber-400">
+                    {(o.payload.theme as string) || "Objection"}
+                  </span>
+                  <p className="text-xs text-[--text-secondary]">
+                    {((o.payload.representative_quotes as string[]) || [])[0]?.slice(0, 80) || ""}
+                  </p>
+                </div>
+              ))
+            )}
+          </DashCard>
+        </div>
+      )}
 
       {timeAgo && (
         <p className="text-xs text-[--text-muted]">Last updated {timeAgo}</p>
