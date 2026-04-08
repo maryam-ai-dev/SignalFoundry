@@ -9,12 +9,14 @@ from sqlalchemy import text
 from app.api.connectors import router as connectors_router
 from app.api.generation import router as generation_router
 from app.api.jobs import router as jobs_router
+from app.api.voice import router as voice_router
 from app.shared.database import SessionLocal
 
 app = FastAPI(title="python-ai-service", version="0.1.0")
 app.include_router(jobs_router)
 app.include_router(generation_router)
 app.include_router(connectors_router)
+app.include_router(voice_router)
 
 app.add_middleware(
     CORSMiddleware,
