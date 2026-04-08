@@ -20,3 +20,4 @@ trafilatura
 spacy
 playwright
 TikTokApi
+discord.py
