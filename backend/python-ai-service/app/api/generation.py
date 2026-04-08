@@ -6,6 +6,7 @@ from app.generation.engagement.comment_engine import generate_comments
 from app.generation.engagement.reply_engine import generate_replies
 from app.generation.hooks.hook_engine import generate_hooks
 from app.generation.platform.platform_engine import adapt_for_platform
+from app.generation.proof.proof_engine import extract_proof
 from app.generation.synthesis.synthesis_engine import synthesize
 
 router = APIRouter()
@@ -113,3 +114,14 @@ async def reply_endpoint(body: GenerateReplyRequest):
         workspace_context=body.workspace_context,
     )
     return {"replies": replies}
+
+
+class ProofExtractRequest(BaseModel):
+    raw_input: str
+    workspace_context: dict = {}
+
+
+@router.post("/internal/generation/proof-extract")
+async def proof_extract_endpoint(body: ProofExtractRequest):
+    result = extract_proof(body.raw_input, body.workspace_context)
+    return result.model_dump()
