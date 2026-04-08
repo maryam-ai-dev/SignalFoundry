@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.generation.angles.angle_engine import generate_angles
 from app.generation.hooks.hook_engine import generate_hooks
+from app.generation.synthesis.synthesis_engine import synthesize
 
 router = APIRouter()
 
@@ -41,3 +42,21 @@ async def angles_endpoint(body: GenerateAnglesRequest):
         workspace_context=body.workspace_context,
     )
     return {"angles": angles}
+
+
+class SynthesizeRequest(BaseModel):
+    pain_clusters: list[dict] = []
+    objection_clusters: list[dict] = []
+    narrative_clusters: list[dict] = []
+    workspace_context: dict = {}
+
+
+@router.post("/internal/generation/synthesis")
+async def synthesis_endpoint(body: SynthesizeRequest):
+    result = synthesize(
+        pain_clusters=body.pain_clusters,
+        objection_clusters=body.objection_clusters,
+        narrative_clusters=body.narrative_clusters,
+        workspace_context=body.workspace_context,
+    )
+    return result.model_dump()
