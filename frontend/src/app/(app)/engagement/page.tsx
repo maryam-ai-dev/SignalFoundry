@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { apiFetch } from "@/lib/api";
+import DraftCard from "@/components/DraftCard";
 
 const INTENT_TABS = ["All", "BUILD_TRUST", "JOIN_DISCUSSION", "HANDLE_OBJECTION"] as const;
 
@@ -18,6 +19,16 @@ interface Opportunity {
   expiresAt: string;
 }
 
+interface Draft {
+  id: string;
+  draftText: string;
+  editedText: string;
+  strategyType: string;
+  status: string;
+  riskFlags: string[];
+  requiresEdit: boolean;
+}
+
 export default function EngagementPage() {
   const { authenticated } = useRequireAuth();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
@@ -25,6 +36,8 @@ export default function EngagementPage() {
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [intentFilter, setIntentFilter] = useState<string>("All");
   const [loading, setLoading] = useState(false);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -37,6 +50,28 @@ export default function EngagementPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [workspaceId]);
+
+  // Load drafts when opportunity selected
+  useEffect(() => {
+    if (!selected) { setDrafts([]); return; }
+    apiFetch(`/api/engagement/drafts?opportunityId=${selected.id}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setDrafts(data); })
+      .catch(() => {});
+  }, [selected]);
+
+  async function handleGenerateDraft() {
+    if (!selected) return;
+    setGeneratingDraft(true);
+    try {
+      const res = await apiFetch(`/api/engagement/opportunities/${selected.id}/generate-draft`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setDrafts(data);
+      }
+    } catch {}
+    setGeneratingDraft(false);
+  }
 
   const filtered =
     intentFilter === "All"
@@ -136,6 +171,13 @@ export default function EngagementPage() {
                 View original post →
               </a>
             )}
+            <button
+              onClick={handleGenerateDraft}
+              disabled={generatingDraft}
+              className="mt-4 rounded-md bg-[--primary] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {generatingDraft ? "Generating..." : "Generate Draft"}
+            </button>
           </div>
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -146,9 +188,48 @@ export default function EngagementPage() {
 
       {/* Right — Draft Panel */}
       <div className="w-[28%] rounded-lg border border-[--border] bg-[--bg-panel] p-4 overflow-y-auto">
-        <div className="flex h-full items-center justify-center">
-          <p className="text-sm text-[--text-muted]">Generate a draft</p>
-        </div>
+        {generatingDraft ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="space-y-2 text-center">
+              <div className="mx-auto h-6 w-6 animate-pulse rounded-full bg-[--primary]/30" />
+              <p className="text-sm text-[--text-muted]">Generating drafts...</p>
+            </div>
+          </div>
+        ) : drafts.length > 0 ? (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-white">Drafts</h3>
+            {drafts.map((d) => (
+              <DraftCard
+                key={d.id}
+                id={d.id}
+                draftText={d.draftText}
+                editedText={d.editedText}
+                strategyType={d.strategyType}
+                status={d.status}
+                riskFlags={d.riskFlags}
+                requiresEdit={d.requiresEdit}
+                onApprove={async () => {
+                  await apiFetch(`/api/engagement/drafts/${d.id}/approve`, { method: "POST" });
+                }}
+                onReject={async () => {
+                  await apiFetch(`/api/engagement/drafts/${d.id}/reject`, { method: "POST" });
+                }}
+                onEdit={async (text) => {
+                  await apiFetch(`/api/engagement/drafts/${d.id}/edit`, {
+                    method: "PUT",
+                    body: JSON.stringify({ editedText: text }),
+                  });
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-[--text-muted]">
+              {selected ? "Click Generate Draft" : "Select an opportunity"}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
