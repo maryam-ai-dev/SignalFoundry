@@ -13,3 +13,4 @@ praw
 sentence-transformers
 openai
 scikit-learn
+google-api-python-client
