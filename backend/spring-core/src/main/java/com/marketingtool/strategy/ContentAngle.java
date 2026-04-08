@@ -41,6 +41,15 @@ public class ContentAngle {
     @Column(name = "intent_type")
     private String intentType;
 
+    @Column(name = "campaign_objective_id")
+    private UUID campaignObjectiveId;
+
+    @Column(name = "goal_fit_score")
+    private Double goalFitScore;
+
+    @Column(name = "cta_type")
+    private String ctaType;
+
     @Column(nullable = false)
     private boolean saved = false;
 

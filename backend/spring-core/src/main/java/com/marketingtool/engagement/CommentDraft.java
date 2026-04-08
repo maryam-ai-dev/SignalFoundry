@@ -50,6 +50,18 @@ public class CommentDraft {
     @Column(name = "duplicate_risk")
     private double duplicateRisk = 0.0;
 
+    @Column(name = "campaign_objective_id")
+    private UUID campaignObjectiveId;
+
+    @Column(name = "goal_fit_score")
+    private Double goalFitScore;
+
+    @Column(name = "intent_type")
+    private String intentType;
+
+    @Column(name = "cta_type")
+    private String ctaType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.PENDING_REVIEW;
