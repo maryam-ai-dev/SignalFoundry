@@ -45,6 +45,15 @@ services:
       postgres:
         condition: service_healthy
 
+  nextjs:
+    build: ./frontend
+    container_name: signalfoundry-nextjs
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://spring:8080
+
   redis:
     image: redis:7-alpine
     container_name: signalfoundry-redis
