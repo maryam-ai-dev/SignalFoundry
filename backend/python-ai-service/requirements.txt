@@ -16,3 +16,4 @@ scikit-learn
 google-api-python-client
 yt-dlp
 feedparser
+trafilatura
