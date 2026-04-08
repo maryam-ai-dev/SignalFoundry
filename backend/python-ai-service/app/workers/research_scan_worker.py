@@ -56,16 +56,12 @@ def run_research_scan(payload: dict) -> dict:
 
         logger.info("Stored %d posts, %d comments for job %s", post_count, comment_count, job_id)
 
-        # Chain to embed worker
+        # Chain to embed worker (which chains to analysis, which chains to generation)
         canonical_ids = [p.canonical_id for p in all_posts]
         if canonical_ids:
             from app.workers.embed_worker import embed_posts_task
-            embed_posts_task.delay(canonical_ids)
+            embed_posts_task.delay(canonical_ids, payload)
             logger.info("Dispatched embed_posts_task for %d posts", len(canonical_ids))
-
-        # Fire stub callbacks until analysis/generation workers are wired (Phase 6+)
-        # TODO: Remove once real analysis/generation workers chain from embed
-        _fire_stub_callbacks(job_id)
 
         return {
             "status": "ok",
@@ -84,20 +80,3 @@ def run_research_scan(payload: dict) -> dict:
         except Exception:
             pass
         raise
-
-
-def _fire_stub_callbacks(job_id: str):
-    """Temporary: fire analysis + generation callbacks until real workers exist."""
-    try:
-        httpx.post(
-            f"{SPRING_URL}/api/internal/jobs/{job_id}/complete",
-            json={"stage": "analysis", "finalStage": False, "result": {}},
-            timeout=10,
-        )
-        httpx.post(
-            f"{SPRING_URL}/api/internal/jobs/{job_id}/complete",
-            json={"stage": "generation", "finalStage": True, "result": {}},
-            timeout=10,
-        )
-    except Exception as exc:
-        logger.warning("Stub callback failed for job %s: %s", job_id, exc)

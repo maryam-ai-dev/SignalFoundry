@@ -10,5 +10,6 @@ celery_app = Celery(
         "app.workers.test_task",
         "app.workers.research_scan_worker",
         "app.workers.embed_worker",
+        "app.workers.analysis_worker",
     ],
 )
