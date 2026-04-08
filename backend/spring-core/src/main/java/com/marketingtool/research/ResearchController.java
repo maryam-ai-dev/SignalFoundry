@@ -51,15 +51,16 @@ public class ResearchController {
     }
 
     private Map<String, Object> runToMap(ResearchRun r) {
-        return Map.of(
-                "runId", r.getId(),
-                "workspaceId", r.getWorkspaceId(),
-                "status", r.getStatus().name(),
-                "mode", r.getMode().name(),
-                "queryText", r.getQueryText(),
-                "platforms", r.getPlatforms() != null ? r.getPlatforms() : List.of(),
-                "createdAt", r.getCreatedAt().toString()
-        );
+        var map = new java.util.HashMap<String, Object>();
+        map.put("runId", r.getId());
+        map.put("workspaceId", r.getWorkspaceId());
+        map.put("status", r.getStatus().name());
+        map.put("mode", r.getMode().name());
+        map.put("queryText", r.getQueryText());
+        map.put("platforms", r.getPlatforms() != null ? r.getPlatforms() : List.of());
+        map.put("campaignObjectiveId", r.getCampaignObjectiveId());
+        map.put("createdAt", r.getCreatedAt().toString());
+        return map;
     }
 
     public record StartScanRequest(

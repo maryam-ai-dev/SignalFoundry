@@ -1,7 +1,7 @@
 package com.marketingtool.research;
 
+import com.marketingtool.campaign.CampaignService;
 import com.marketingtool.shared.config.FastApiClient;
-import com.marketingtool.workspace.Workspace;
 import com.marketingtool.workspace.WorkspaceRepository;
 import com.marketingtool.workflow.JobRun;
 import com.marketingtool.workflow.JobRunService;
@@ -22,14 +22,30 @@ public class ResearchRunOrchestrator {
     private final JobRunService jobRunService;
     private final FastApiClient fastApiClient;
     private final WorkspaceRepository workspaceRepository;
+    private final CampaignService campaignService;
 
     @Transactional
     public ResearchRun startScan(UUID workspaceId, String queryText, List<String> platforms,
                                   ResearchRun.Mode mode, Map<String, Object> goalContext) {
         // 1. Create ResearchRun (PENDING)
         ResearchRun run = researchRunService.create(workspaceId, queryText, platforms, mode);
-        if (goalContext != null) {
-            run.setGoalContextSnapshot(goalContext);
+
+        // Auto-attach GoalContext from active campaign if none provided
+        Map<String, Object> effectiveGoalContext = goalContext;
+        var activeCampaign = campaignService.getActiveCampaign(workspaceId);
+        if (activeCampaign != null) {
+            run.setCampaignObjectiveId(activeCampaign.getId());
+            if (effectiveGoalContext == null) {
+                effectiveGoalContext = new HashMap<>();
+                effectiveGoalContext.put("goal_type", activeCampaign.getGoalType().name());
+                effectiveGoalContext.put("target_audience", activeCampaign.getTargetAudience());
+                effectiveGoalContext.put("desired_action", activeCampaign.getDesiredAction());
+                effectiveGoalContext.put("cta_style", activeCampaign.getCtaStyle());
+                effectiveGoalContext.put("tone_guidance", activeCampaign.getToneGuidance());
+            }
+        }
+        if (effectiveGoalContext != null) {
+            run.setGoalContextSnapshot(effectiveGoalContext);
         }
 
         // 2. Create JobRun (QUEUED)
@@ -39,8 +55,8 @@ public class ResearchRunOrchestrator {
         payload.put("platforms", platforms);
         payload.put("mode", mode.name());
         payload.put("research_run_id", run.getId().toString());
-        if (goalContext != null) {
-            payload.put("goal_context", goalContext);
+        if (effectiveGoalContext != null) {
+            payload.put("goal_context", effectiveGoalContext);
         }
 
         // Include workspace product context for analysis engines
