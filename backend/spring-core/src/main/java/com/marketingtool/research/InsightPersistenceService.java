@@ -62,6 +62,19 @@ public class InsightPersistenceService {
         count += persistListType(runId, result, "objection_clusters", "OBJECTION");
         count += persistListType(runId, result, "belief_gaps", "BELIEF_GAP");
 
+        // language_map is a single object, not a list
+        Object languageMap = result.get("language_map");
+        if (languageMap instanceof Map<?, ?> langMap) {
+            InsightSnapshot snapshot = new InsightSnapshot();
+            snapshot.setRunId(runId);
+            snapshot.setType("LANGUAGE");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) langMap;
+            snapshot.setPayload(payload);
+            insightRepository.save(snapshot);
+            count++;
+        }
+
         log.info("Persisted {} insight snapshots for run {}", count, runId);
     }
 
