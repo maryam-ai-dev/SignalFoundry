@@ -14,3 +14,4 @@ sentence-transformers
 openai
 scikit-learn
 google-api-python-client
+yt-dlp
