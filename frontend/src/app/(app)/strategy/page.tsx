@@ -17,11 +17,27 @@ interface HookItem {
   saved: boolean;
 }
 
+interface AngleItem {
+  id: string;
+  angleType: string;
+  confidence: number;
+  content: Record<string, unknown>;
+  saved: boolean;
+}
+
+interface Positioning {
+  summary: string;
+  key_themes: string[];
+  recommended_directions: string[];
+}
+
 export default function StrategyPage() {
   const { authenticated } = useRequireAuth();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const [tab, setTab] = useState<Tab>("Hooks");
   const [hooks, setHooks] = useState<HookItem[]>([]);
+  const [angles, setAngles] = useState<AngleItem[]>([]);
+  const [positioning, setPositioning] = useState<Positioning | null>(null);
   const [loading, setLoading] = useState(false);
   const [latestRunId, setLatestRunId] = useState<string | null>(null);
 
@@ -51,6 +67,28 @@ export default function StrategyPage() {
       .finally(() => setLoading(false));
   }, [tab, latestRunId]);
 
+  // Fetch angles
+  useEffect(() => {
+    if (tab !== "Angles" || !latestRunId) return;
+    setLoading(true);
+    apiFetch(`/api/strategy/angles?runId=${latestRunId}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setAngles(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [tab, latestRunId]);
+
+  // Fetch positioning
+  useEffect(() => {
+    if (tab !== "Positioning" || !workspaceId) return;
+    setLoading(true);
+    apiFetch(`/api/strategy/positioning?workspaceId=${workspaceId}`)
+      .then((r) => r.json())
+      .then((data) => { if (data.content) setPositioning(data.content as Positioning); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [tab, workspaceId]);
+
   async function saveHook(id: string) {
     await apiFetch(`/api/strategy/hooks/${id}/save`, { method: "POST" });
   }
@@ -65,6 +103,23 @@ export default function StrategyPage() {
     if (res.ok) {
       const updated = await res.json();
       setHooks((prev) => prev.map((h) => (h.id === id ? { ...h, content: updated.content } : h)));
+    }
+  }
+
+  async function saveAngle(id: string) {
+    await apiFetch(`/api/strategy/angles/${id}/save`, { method: "POST" });
+  }
+
+  async function archiveAngle(id: string) {
+    await apiFetch(`/api/strategy/angles/${id}/archive`, { method: "POST" });
+    setAngles((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  async function regenerateAngle(id: string) {
+    const res = await apiFetch(`/api/strategy/angles/${id}/regenerate`, { method: "POST" });
+    if (res.ok) {
+      const updated = await res.json();
+      setAngles((prev) => prev.map((a) => (a.id === id ? { ...a, content: updated.content } : a)));
     }
   }
 
@@ -117,15 +172,68 @@ export default function StrategyPage() {
       )}
 
       {tab === "Angles" && (
-        <p className="text-sm text-[--text-muted]">Angles tab — wired in next sprint</p>
+        <div className="space-y-3">
+          {loading ? (
+            <p className="text-sm text-[--text-muted]">Loading angles...</p>
+          ) : angles.length === 0 ? (
+            <p className="text-sm text-[--text-muted]">No angles yet. Run a scan first.</p>
+          ) : (
+            angles.map((a) => (
+              <StrategyCard
+                key={a.id}
+                id={a.id}
+                type={a.angleType}
+                typeLabel={a.angleType.replace("_", " ")}
+                text={(a.content?.title as string) || ""}
+                secondaryText={(a.content?.example_opening_line as string) || (a.content?.description as string) || ""}
+                confidence={a.confidence}
+                saved={a.saved}
+                onSave={() => saveAngle(a.id)}
+                onArchive={() => archiveAngle(a.id)}
+                onRegenerate={() => regenerateAngle(a.id)}
+              />
+            ))
+          )}
+        </div>
       )}
 
       {tab === "Positioning" && (
-        <p className="text-sm text-[--text-muted]">Positioning tab — wired in next sprint</p>
+        <div className="rounded-lg border border-[--border] bg-[--bg-panel] p-6">
+          {loading ? (
+            <p className="text-sm text-[--text-muted]">Loading positioning...</p>
+          ) : !positioning ? (
+            <p className="text-sm text-[--text-muted]">No positioning profile yet. Run a scan first.</p>
+          ) : (
+            <div className="space-y-5">
+              <h2 className="text-lg font-semibold text-white">Positioning Profile</h2>
+              <p className="text-sm leading-relaxed text-[--text-secondary]">{positioning.summary}</p>
+              {positioning.key_themes?.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[--text-muted]">Key Themes</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {positioning.key_themes.map((t, i) => (
+                      <span key={i} className="rounded-full bg-[--bg-secondary] px-3 py-1 text-xs text-[--text-secondary]">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {positioning.recommended_directions?.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[--text-muted]">Recommended Directions</h3>
+                  <ul className="space-y-2">
+                    {positioning.recommended_directions.map((d, i) => (
+                      <li key={i} className="text-sm text-[--text-secondary]">{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {tab === "Platform" && (
-        <p className="text-sm text-[--text-muted]">Platform adaptation — wired in next sprint</p>
+        <p className="text-sm text-[--text-muted]">Platform adaptation — coming soon</p>
       )}
     </div>
   );
