@@ -32,8 +32,8 @@ public class JobCallbackController {
 
         switch (payload.stage()) {
             case "analysis" -> {
-                insightPersistenceService.persist(payload.result());
                 if (researchRunId != null) {
+                    insightPersistenceService.persistFromAnalysisResult(researchRunId, payload.result());
                     researchRunService.markPartialAnalysisReady(researchRunId);
                 }
             }
