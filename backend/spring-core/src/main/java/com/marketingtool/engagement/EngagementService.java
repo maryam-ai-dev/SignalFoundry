@@ -1,5 +1,6 @@
 package com.marketingtool.engagement;
 
+import com.marketingtool.workspace.PersonalizationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.util.UUID;
 public class EngagementService {
 
     private final CommentDraftRepository draftRepository;
+    private final PersonalizationService personalizationService;
     private final CommentOpportunityRepository opportunityRepository;
 
     @Transactional
@@ -37,6 +39,8 @@ public class EngagementService {
 
         opportunity.setStatus(CommentOpportunity.Status.DRAFT_READY);
         opportunityRepository.save(opportunity);
+
+        personalizationService.recordDecision(draft.getWorkspaceId(), "comment", draft.getStrategyType());
 
         return draft;
     }

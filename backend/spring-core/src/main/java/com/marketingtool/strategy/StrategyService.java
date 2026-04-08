@@ -1,5 +1,6 @@
 package com.marketingtool.strategy;
 
+import com.marketingtool.workspace.PersonalizationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class StrategyService {
+
+    private final PersonalizationService personalizationService;
 
     private final HookSuggestionRepository hookRepository;
     private final ContentAngleRepository angleRepository;
@@ -44,6 +47,7 @@ public class StrategyService {
         HookSuggestion hook = hookRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Hook not found: " + id));
         hook.setSaved(true);
+        personalizationService.recordDecision(hook.getWorkspaceId(), "hook", hook.getHookType());
         return hookRepository.save(hook);
     }
 
@@ -69,6 +73,7 @@ public class StrategyService {
         ContentAngle angle = angleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Angle not found: " + id));
         angle.setSaved(true);
+        personalizationService.recordDecision(angle.getWorkspaceId(), "angle", angle.getAngleType());
         return angleRepository.save(angle);
     }
 

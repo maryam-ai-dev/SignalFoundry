@@ -15,6 +15,22 @@ import java.util.UUID;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
+    private final PersonalizationService personalizationService;
+
+    @GetMapping("/personalization")
+    public Map<String, Object> getPersonalization(@RequestParam UUID workspaceId) {
+        PersonalStrategyProfile profile = personalizationService.getProfile(workspaceId);
+        if (profile == null) {
+            return Map.of("message", "No personalization data yet");
+        }
+        return Map.of(
+                "workspaceId", profile.getWorkspaceId(),
+                "preferredAngleTypes", profile.getPreferredAngleTypes() != null ? profile.getPreferredAngleTypes() : Map.of(),
+                "preferredHookFormats", profile.getPreferredHookFormats() != null ? profile.getPreferredHookFormats() : Map.of(),
+                "preferredCommentTones", profile.getPreferredCommentTones() != null ? profile.getPreferredCommentTones() : Map.of(),
+                "totalDecisions", profile.getTotalDecisions()
+        );
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
