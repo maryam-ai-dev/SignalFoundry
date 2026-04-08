@@ -40,6 +40,7 @@ public class ResearchRunOrchestrator {
             payload.put("goal_context", goalContext);
         }
         JobRun job = jobRunService.createJob("RESEARCH_SCAN", payload, run.getId());
+        payload.put("job_id", job.getId().toString());
 
         // 3. Enqueue via FastAPI → celeryTaskId
         String celeryTaskId = fastApiClient.enqueueJob("RESEARCH_SCAN", payload);
