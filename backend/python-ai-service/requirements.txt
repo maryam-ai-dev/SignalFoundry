@@ -21,3 +21,4 @@ spacy
 playwright
 TikTokApi
 discord.py
+instaloader
