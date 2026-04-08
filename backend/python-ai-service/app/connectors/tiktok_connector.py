@@ -1,12 +1,13 @@
-"""TikTok connector — uses unofficial TikTokApi library.
+"""TikTok connector — uses tikwm.com public API (primary) with TikTokApi fallback.
 
-Grey area: unofficial browser automation. For personal/research use only.
-May require session cookies. Returns [] on any failure.
+Grey area: third-party API for personal/research use only.
+Returns [] on any failure — never crashes the scan.
 """
 
-import asyncio
 import logging
 from datetime import datetime, timezone
+
+import httpx
 
 from app.connectors.base_connector import BaseConnector
 
@@ -16,108 +17,87 @@ logger = logging.getLogger(__name__)
 class TikTokConnector(BaseConnector):
 
     def search_posts(self, query: str, window_days: int = 7, limit: int = 25) -> list[dict]:
-        try:
-            return asyncio.run(self.search_posts_async(query, window_days, limit))
-        except RuntimeError:
-            # Already in an event loop (Celery worker)
-            loop = asyncio.new_event_loop()
-            try:
-                return loop.run_until_complete(self.search_posts_async(query, window_days, limit))
-            finally:
-                loop.close()
-        except Exception as e:
-            logger.warning("TikTok search error: %s", e)
-            return []
-
-    async def search_posts_async(self, query: str, window_days: int = 7, limit: int = 25) -> list[dict]:
-        try:
-            from TikTokApi import TikTokApi
-
-            results = []
-            async with TikTokApi() as api:
-                await api.create_sessions(num_sessions=1, sleep_after=3, headless=True)
-                count = 0
-                async for video in api.search.videos(query, count=limit):
-                    vd = video.as_dict if hasattr(video, 'as_dict') else video
-                    if isinstance(vd, dict):
-                        desc = vd.get("desc", "")
-                        author = vd.get("author", {})
-                        stats = vd.get("stats", {})
-                        vid_id = str(vd.get("id", ""))
-                    else:
-                        desc = getattr(video, 'desc', '') or ''
-                        author = getattr(video, 'author', {}) or {}
-                        stats = getattr(video, 'stats', {}) or {}
-                        vid_id = str(getattr(video, 'id', ''))
-
-                    author_handle = author.get("uniqueId", "") if isinstance(author, dict) else str(author)
-
-                    results.append({
-                        "source_platform": "tiktok",
-                        "source_post_id": vid_id,
-                        "title": "",
-                        "body": desc,
-                        "author": author_handle,
-                        "url": f"https://tiktok.com/@{author_handle}/video/{vid_id}",
-                        "subreddit": "",
-                        "score": stats.get("playCount", 0) if isinstance(stats, dict) else 0,
-                        "comment_count": stats.get("commentCount", 0) if isinstance(stats, dict) else 0,
-                        "created_utc": datetime.now(tz=timezone.utc).isoformat(),
-                        "fetched_at": datetime.now(tz=timezone.utc).isoformat(),
-                    })
-                    count += 1
-                    if count >= limit:
-                        break
-
-            logger.info("TikTok returned %d posts for '%s'", len(results), query)
+        results = self._search_tikwm(query, limit)
+        if results:
             return results
-        except Exception as e:
-            logger.warning("TikTok API error: %s", e)
-            return []
+        # TikTokApi fallback disabled — too unreliable with session management
+        return []
 
     def fetch_comments(self, post_id: str, limit: int = 50) -> list[dict]:
+        return self._fetch_comments_tikwm(post_id, limit)
+
+    def _search_tikwm(self, query: str, limit: int) -> list[dict]:
         try:
-            return asyncio.run(self._fetch_comments_async(post_id, limit))
+            resp = httpx.get(
+                "https://www.tikwm.com/api/feed/search",
+                params={"keywords": query, "count": min(limit, 30), "cursor": 0},
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                return []
+
+            data = resp.json()
+            videos = data.get("data", {}).get("videos", [])
+            results = []
+            for v in videos[:limit]:
+                vid_id = str(v.get("video_id", "") or v.get("id", ""))
+                author = v.get("author", {})
+                author_handle = author.get("unique_id", "") if isinstance(author, dict) else ""
+
+                results.append({
+                    "source_platform": "tiktok",
+                    "source_post_id": vid_id,
+                    "title": "",
+                    "body": v.get("title", "") or "",
+                    "author": author_handle,
+                    "url": f"https://tiktok.com/@{author_handle}/video/{vid_id}" if author_handle else "",
+                    "subreddit": "",
+                    "score": v.get("play_count", 0) or 0,
+                    "comment_count": v.get("comment_count", 0) or 0,
+                    "created_utc": datetime.fromtimestamp(
+                        v.get("create_time", 0), tz=timezone.utc
+                    ).isoformat() if v.get("create_time") else datetime.now(tz=timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(tz=timezone.utc).isoformat(),
+                })
+
+            logger.info("TikTok (tikwm) returned %d posts for '%s'", len(results), query)
+            return results
         except Exception as e:
-            logger.warning("TikTok comments error: %s", e)
+            logger.warning("TikTok tikwm error: %s", e)
             return []
 
-    async def _fetch_comments_async(self, post_id: str, limit: int) -> list[dict]:
+    def _fetch_comments_tikwm(self, post_id: str, limit: int) -> list[dict]:
         try:
-            from TikTokApi import TikTokApi
+            resp = httpx.get(
+                "https://www.tikwm.com/api/comment/list",
+                params={"url": f"https://www.tiktok.com/@x/video/{post_id}", "count": min(limit, 30), "cursor": 0},
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=15,
+            )
+            if resp.status_code != 200:
+                return []
 
+            data = resp.json()
+            comments = data.get("data", {}).get("comments", [])
             results = []
-            async with TikTokApi() as api:
-                await api.create_sessions(num_sessions=1, sleep_after=3, headless=True)
-                video = api.video(id=post_id)
-                count = 0
-                async for comment in video.comments(count=limit):
-                    cd = comment.as_dict if hasattr(comment, 'as_dict') else comment
-                    if isinstance(cd, dict):
-                        text = cd.get("text", "")
-                        user = cd.get("user", {})
-                        cid = str(cd.get("cid", ""))
-                    else:
-                        text = getattr(comment, 'text', '')
-                        user = getattr(comment, 'user', {}) or {}
-                        cid = str(getattr(comment, 'cid', ''))
-
-                    results.append({
-                        "source_platform": "tiktok",
-                        "source_comment_id": cid,
-                        "post_source_id": post_id,
-                        "author": user.get("uniqueId", "") if isinstance(user, dict) else "",
-                        "body": text,
-                        "score": 0,
-                        "depth": 0,
-                        "created_utc": datetime.now(tz=timezone.utc).isoformat(),
-                        "fetched_at": datetime.now(tz=timezone.utc).isoformat(),
-                    })
-                    count += 1
-                    if count >= limit:
-                        break
+            for c in comments[:limit]:
+                user = c.get("user", {})
+                results.append({
+                    "source_platform": "tiktok",
+                    "source_comment_id": str(c.get("cid", "")),
+                    "post_source_id": post_id,
+                    "author": user.get("unique_id", "") if isinstance(user, dict) else "",
+                    "body": c.get("text", ""),
+                    "score": c.get("digg_count", 0) or 0,
+                    "depth": 0,
+                    "created_utc": datetime.fromtimestamp(
+                        c.get("create_time", 0), tz=timezone.utc
+                    ).isoformat() if c.get("create_time") else datetime.now(tz=timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(tz=timezone.utc).isoformat(),
+                })
 
             return results
         except Exception as e:
-            logger.warning("TikTok comments API error: %s", e)
+            logger.warning("TikTok comments error: %s", e)
             return []
