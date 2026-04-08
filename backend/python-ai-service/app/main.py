@@ -4,6 +4,7 @@ import redis
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.shared.database import SessionLocal
@@ -51,3 +52,14 @@ async def internal_status():
         pass
 
     return {"db": db_status, "redis": redis_status}
+
+
+class EnqueueJobRequest(BaseModel):
+    type: str
+    payload: dict = {}
+
+
+@app.post("/internal/jobs/enqueue")
+async def enqueue_job(body: EnqueueJobRequest):
+    # Stub: return a fake celery_task_id until real worker is wired (Sprint 3.10)
+    return {"celery_task_id": f"stub-{body.type}-001"}
