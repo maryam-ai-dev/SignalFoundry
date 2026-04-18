@@ -28,5 +28,6 @@ Thumbs.db
 
 # Project docs (local only)
 CLAUDE.md
-sprint-plan.md
+SPRINT_PLAN_BACKEND.md
 .vscode/
+SPRINT_PLAN_FRONTEND.md

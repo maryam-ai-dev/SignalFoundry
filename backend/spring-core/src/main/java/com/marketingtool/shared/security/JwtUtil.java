@@ -20,7 +20,7 @@ public class JwtUtil {
     private final long expirationHours;
 
     public JwtUtil(
-            @Value("${app.jwt.secret:default-secret-key-that-is-at-least-32-bytes-long!!}") String secret,
+            @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-hours:24}") long expirationHours) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationHours = expirationHours;
