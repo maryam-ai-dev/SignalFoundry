@@ -10,6 +10,10 @@ import HookSlotCard, {
   type HookCardData,
   type SlotName,
 } from "@/components/HookSlotCard";
+import VoicePanel, {
+  DEFAULT_SLIDERS,
+  type VoiceSliders,
+} from "@/components/VoicePanel";
 
 interface ContextData {
   signalId: string | null;
@@ -45,6 +49,7 @@ function StudioBody() {
     topic: null,
   });
   const [topicDraft, setTopicDraft] = useState("");
+  const [sliders, setSliders] = useState<VoiceSliders>(DEFAULT_SLIDERS);
 
   const isInvestor = accountMode === "INVESTOR";
 
@@ -227,6 +232,7 @@ function StudioBody() {
             workspaceId={workspaceId}
             topic={context.topic || context.summary}
             signalId={context.signalId}
+            sliders={sliders}
           />
         ) : (
           <p className="text-xs text-[--text-muted]">
@@ -238,7 +244,11 @@ function StudioBody() {
       {/* Voice pane — FOUNDER only */}
       {!isInvestor && (
         <aside className="w-full border-t border-[--border] bg-[--bg-panel] p-5 sm:w-48 sm:border-l sm:border-t-0 sm:flex-shrink-0">
-          <VoicePanelPlaceholder />
+          <VoicePanel
+            workspaceId={workspaceId}
+            sliders={sliders}
+            onSlidersChange={setSliders}
+          />
         </aside>
       )}
     </div>
@@ -294,10 +304,12 @@ function HookSessionBody({
   workspaceId,
   topic,
   signalId,
+  sliders,
 }: {
   workspaceId: string | null;
   topic: string | null;
   signalId: string | null;
+  sliders: VoiceSliders;
 }) {
   const [cards, setCards] = useState<HookCardData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -325,7 +337,7 @@ function HookSessionBody({
     try {
       const res = await apiFetch("/api/strategy/hooks", {
         method: "POST",
-        body: JSON.stringify({ workspaceId, topic, signalId, count: 3 }),
+        body: JSON.stringify({ workspaceId, topic, signalId, count: 3, sliders }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -361,6 +373,7 @@ function HookSessionBody({
           signalId,
           locked,
           existing: card.slots,
+          sliders,
         }),
       });
       if (!res.ok) return null;
@@ -379,7 +392,7 @@ function HookSessionBody({
     try {
       const res = await apiFetch("/api/strategy/hooks", {
         method: "POST",
-        body: JSON.stringify({ workspaceId, topic, signalId, count: 3 }),
+        body: JSON.stringify({ workspaceId, topic, signalId, count: 3, sliders }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -449,13 +462,3 @@ function HookSessionBody({
   );
 }
 
-function VoicePanelPlaceholder() {
-  return (
-    <div className="space-y-3">
-      <h2 className="font-mono text-[10px] uppercase tracking-wide text-[--text-muted]">
-        Voice
-      </h2>
-      <p className="text-xs text-[--text-muted]">Voice panel arrives in the next sprint.</p>
-    </div>
-  );
-}
