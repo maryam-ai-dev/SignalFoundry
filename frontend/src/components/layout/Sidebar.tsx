@@ -4,14 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard" },
+  { label: "Today", href: "/today" },
   { label: "Research", href: "/research" },
-  { label: "Strategy", href: "/strategy" },
-  { label: "Engagement", href: "/engagement" },
-  { label: "Memory", href: "/memory" },
-  { label: "Voice", href: "/voice" },
-  { label: "Campaigns", href: "/campaigns" },
-  { label: "Settings", href: "/settings" },
+  { label: "Studio", href: "/studio" },
+  { label: "Vault", href: "/vault" },
 ];
 
 export default function Sidebar() {
@@ -29,7 +25,6 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
-
           return (
             <Link
               key={item.href}
@@ -46,11 +41,53 @@ export default function Sidebar() {
                   style={{ background: "var(--rainbow)" }}
                 />
               )}
-              {item.label}
+              <span className="hidden sm:inline">{item.label}</span>
+              <span className="sm:hidden text-[10px] uppercase tracking-wide">
+                {item.label.slice(0, 1)}
+              </span>
             </Link>
           );
         })}
       </nav>
+
+      <div className="border-t border-[--border] px-2 py-3">
+        <Link
+          href="/settings"
+          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "text-white bg-[--bg-secondary]"
+              : "text-[--text-secondary] hover:text-white hover:bg-[--bg-secondary]"
+          }`}
+          aria-label="Settings"
+        >
+          <SettingsIcon />
+          <span className="hidden sm:inline">Settings</span>
+        </Link>
+        <div className="mt-2 flex items-center justify-between px-3 py-1 font-mono text-[8px] uppercase tracking-wider text-[--text-muted]">
+          <span>Command palette</span>
+          <span>⌘K</span>
+        </div>
+      </div>
     </aside>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
   );
 }
