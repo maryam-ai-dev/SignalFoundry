@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { apiFetch } from "@/lib/api";
 import MigrationBanner from "@/components/MigrationBanner";
+import InterestStrip from "@/components/InterestStrip";
+import SignalOfTheDay, { type Signal } from "@/components/SignalOfTheDay";
 
-interface Insight { type: string; payload: Record<string, unknown>; confidence: number }
+type Insight = Signal;
 interface HookItem { hookId?: string; id?: string; text: string; voiceMatch?: number; status?: string }
 interface Opportunity { id?: string; platform: string; postSummary: string; relevanceScore: number }
 interface ResearchRun { runId: string; status: string; niche?: string }
@@ -26,6 +28,11 @@ export default function TodayPage() {
   const [opportunities, setOpportunities] = useState<Section<Opportunity[]>>(initial());
   const [runs, setRuns] = useState<Section<ResearchRun[]>>(initial());
   const [autoScanStarted, setAutoScanStarted] = useState(false);
+  const [interests, setInterests] = useState<string[]>([]);
+
+  const handleInterestsChange = useCallback((list: string[]) => {
+    setInterests(list);
+  }, []);
 
   async function load() {
     if (!workspaceId) return;
@@ -108,16 +115,15 @@ export default function TodayPage() {
         )}
       </div>
 
+      <InterestStrip workspaceId={workspaceId} onChange={handleInterestsChange} />
+
       <Section title="Signal of the day" state={signals} onRetry={load}>
-        {(data) =>
-          data && data.length > 0 ? (
-            <p className="text-sm text-[--text-secondary]">
-              {(data[0].payload?.summary as string) || JSON.stringify(data[0].payload).slice(0, 140)}
-            </p>
-          ) : (
-            <p className="text-xs text-[--text-muted]">Signals arriving…</p>
-          )
-        }
+        {(data) => (
+          <SignalOfTheDay
+            signal={data && data.length > 0 ? data[0] : null}
+            interests={interests}
+          />
+        )}
       </Section>
 
       <Section title="Hooks ready to ship" state={hooks} onRetry={load}>
