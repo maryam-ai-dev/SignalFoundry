@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import type { GapReport } from "@/components/gapReport/types";
 import VerdictBox from "@/components/gapReport/VerdictBox";
 import ReportFolds from "@/components/gapReport/ReportFolds";
+import ReportActions from "@/components/gapReport/ReportActions";
 
 interface RunMeta {
   runId: string;
@@ -125,6 +126,11 @@ export default function GapReportPage({
       {state.kind === "ready" && (
         <>
           <VerdictBox report={state.report} />
+          <ReportActions
+            runId={runId}
+            report={state.report}
+            onReportUpdated={(next) => setState({ kind: "ready", report: next })}
+          />
           <ReportFolds report={state.report} />
         </>
       )}
