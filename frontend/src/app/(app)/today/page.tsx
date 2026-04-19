@@ -81,6 +81,14 @@ export default function TodayPage() {
   }
 
   useEffect(() => {
+    // Reset sections to loading skeletons so the previous workspace's data
+    // never lingers while the new workspace's data is in flight.
+    setSignals(initial());
+    setHooks(initial());
+    setOpportunities(initial());
+    setRuns(initial());
+    setDeltas(null);
+    setAutoScanStarted(false);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);

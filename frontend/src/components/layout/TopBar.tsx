@@ -46,6 +46,15 @@ export default function TopBar() {
   const [wsError, setWsError] = useState("");
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Clear pill on workspace switch so we never display a stale run label.
+  useEffect(() => {
+    if (fadeTimer.current) {
+      clearTimeout(fadeTimer.current);
+      fadeTimer.current = null;
+    }
+    setPill(null);
+  }, [workspaceId]);
+
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
@@ -123,13 +132,22 @@ export default function TopBar() {
   async function selectWorkspace(w: WorkspaceSummary) {
     const id = w.id || w.workspaceId;
     if (!id) return;
+    // Optimistic: update the store with what we already know about this
+    // workspace so the TopBar name and Today fetches flip immediately.
+    setWorkspace(id, {
+      id,
+      name: w.name,
+      niche: w.niche,
+      productName: w.productName,
+      accountMode: w.accountMode,
+    });
+    setDropdownOpen(false);
+    router.push("/today");
     try {
       const res = await apiFetch(`/api/workspaces/${id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setWorkspace(id, data);
-      setDropdownOpen(false);
-      router.push("/today");
     } catch (e) {
       setWsError((e as Error).message || "Switch failed");
     }
