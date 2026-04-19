@@ -44,6 +44,7 @@ function StudioBody() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const signalParam = searchParams.get("signal");
+  const hookParam = searchParams.get("hook");
 
   const [context, setContext] = useState<ContextData>({
     signalId: signalParam,
@@ -61,6 +62,25 @@ function StudioBody() {
   const loadContext = useCallback(async () => {
     if (!workspaceId) return;
     try {
+      if (hookParam) {
+        const res = await apiFetch(`/api/swipe-file/${hookParam}`);
+        if (res.ok) {
+          const entry = await res.json();
+          const content = (entry?.content as Record<string, unknown>) || {};
+          const text =
+            (content.text as string) ||
+            (entry?.type as string) ||
+            "Hook from vault";
+          setContext((c) => ({
+            ...c,
+            signalId: null,
+            summary: text,
+            topic: text,
+            matchedInterests: [],
+          }));
+          return;
+        }
+      }
       let insight: Record<string, unknown> | null = null;
       if (signalParam) {
         const res = await apiFetch(`/api/insights/${signalParam}`);
@@ -115,7 +135,7 @@ function StudioBody() {
     } catch {
       // best effort
     }
-  }, [workspaceId, signalParam]);
+  }, [workspaceId, signalParam, hookParam]);
 
   useEffect(() => {
     loadContext();
