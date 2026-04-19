@@ -35,13 +35,13 @@ class ResearchRunServiceTest {
 
     @Test
     void create_returnsPending() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         assertThat(run.getStatus()).isEqualTo(ResearchRun.Status.PENDING);
     }
 
     @Test
     void markRunning_fromPending_succeeds() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         run = service.markRunning(run.getId());
         assertThat(run.getStatus()).isEqualTo(ResearchRun.Status.RUNNING);
         assertThat(run.getStartedAt()).isNotNull();
@@ -49,7 +49,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markRunning_again_throwsInvalidState() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         UUID id = run.getId();
         assertThatThrownBy(() -> service.markRunning(id))
@@ -58,7 +58,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markPartialAnalysisReady_fromRunning_succeeds() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         run = service.markPartialAnalysisReady(run.getId());
         assertThat(run.getStatus()).isEqualTo(ResearchRun.Status.PARTIAL_ANALYSIS_READY);
@@ -66,7 +66,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markCompleted_fromPartialAnalysisReady_succeeds() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         service.markPartialAnalysisReady(run.getId());
         run = service.markCompleted(run.getId());
@@ -76,7 +76,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markRunning_onCompleted_throwsInvalidState() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         service.markPartialAnalysisReady(run.getId());
         service.markCompleted(run.getId());
@@ -87,7 +87,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markPartialAnalysisReady_onPending_skippingRunning_throwsInvalidState() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         UUID id = run.getId();
         assertThatThrownBy(() -> service.markPartialAnalysisReady(id))
                 .isInstanceOf(InvalidStateException.class);
@@ -95,7 +95,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markCompleted_onRunning_skippingPartial_throwsInvalidState() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         UUID id = run.getId();
         assertThatThrownBy(() -> service.markCompleted(id))
@@ -104,7 +104,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markFailed_fromRunning_succeeds() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         run = service.markFailed(run.getId(), "connector timeout");
         assertThat(run.getStatus()).isEqualTo(ResearchRun.Status.FAILED);
@@ -113,7 +113,7 @@ class ResearchRunServiceTest {
 
     @Test
     void markFailed_fromPartialAnalysisReady_succeeds() {
-        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        ResearchRun run = service.create(workspaceId, "test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         service.markRunning(run.getId());
         service.markPartialAnalysisReady(run.getId());
         run = service.markFailed(run.getId(), "generation error");
@@ -122,9 +122,9 @@ class ResearchRunServiceTest {
 
     @Test
     void duplicateGuard_sameWorkspaceAndQuery_throwsDuplicateRun() {
-        service.create(workspaceId, "duplicate test", List.of("reddit"), ResearchRun.Mode.GENERAL);
+        service.create(workspaceId, "duplicate test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL);
         assertThatThrownBy(() ->
-                service.create(workspaceId, "duplicate test", List.of("reddit"), ResearchRun.Mode.GENERAL))
+                service.create(workspaceId, "duplicate test", List.of("reddit"), ResearchRun.CampaignMode.GENERAL))
                 .isInstanceOf(DuplicateRunException.class);
     }
 }

@@ -21,13 +21,22 @@ public class ResearchController {
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> startScan(@RequestBody StartScanRequest req,
                                           @CurrentUser UUID userId) {
-        ResearchRun.Mode mode = req.mode() != null
-                ? ResearchRun.Mode.valueOf(req.mode())
-                : ResearchRun.Mode.GENERAL;
+        String queryText = req.niche() != null ? req.niche() : req.queryText();
+        if (queryText == null || queryText.isBlank()) {
+            throw new IllegalArgumentException("niche (or queryText) is required");
+        }
+
+        ResearchRun.Mode mode = parseMode(req.mode());
+        ResearchRun.CampaignMode campaignMode = parseCampaignMode(req.campaignMode());
+
+        if (mode == ResearchRun.Mode.VALIDATE
+                && (req.ideaDescription() == null || req.ideaDescription().isBlank())) {
+            throw new IllegalArgumentException("ideaDescription is required when mode=VALIDATE");
+        }
 
         ResearchRun run = orchestrator.startScan(
-                req.workspaceId(), req.queryText(), req.platforms(),
-                mode, req.goalContext());
+                req.workspaceId(), queryText, req.platforms(),
+                campaignMode, mode, req.ideaDescription(), req.goalContext());
 
         return runToMap(run);
     }
@@ -50,12 +59,32 @@ public class ResearchController {
                 .toList();
     }
 
+    private ResearchRun.Mode parseMode(String raw) {
+        if (raw == null || raw.isBlank()) return ResearchRun.Mode.SCAN;
+        try {
+            return ResearchRun.Mode.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid mode: must be SCAN or VALIDATE");
+        }
+    }
+
+    private ResearchRun.CampaignMode parseCampaignMode(String raw) {
+        if (raw == null || raw.isBlank()) return ResearchRun.CampaignMode.GENERAL;
+        try {
+            return ResearchRun.CampaignMode.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid campaignMode: must be GENERAL or CAMPAIGN");
+        }
+    }
+
     private Map<String, Object> runToMap(ResearchRun r) {
         var map = new java.util.HashMap<String, Object>();
         map.put("runId", r.getId());
         map.put("workspaceId", r.getWorkspaceId());
         map.put("status", r.getStatus().name());
         map.put("mode", r.getMode().name());
+        map.put("campaignMode", r.getCampaignMode().name());
+        map.put("ideaDescription", r.getIdeaDescription());
         map.put("queryText", r.getQueryText());
         map.put("platforms", r.getPlatforms() != null ? r.getPlatforms() : List.of());
         map.put("campaignObjectiveId", r.getCampaignObjectiveId());
@@ -66,8 +95,11 @@ public class ResearchController {
     public record StartScanRequest(
         UUID workspaceId,
         String queryText,
+        String niche,
         List<String> platforms,
         String mode,
+        String campaignMode,
+        String ideaDescription,
         Map<String, Object> goalContext
     ) {}
 }

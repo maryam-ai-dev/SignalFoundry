@@ -42,7 +42,8 @@ class ResearchRunRepositoryTest {
         Optional<ResearchRun> found = runRepository.findById(run.getId());
         assertThat(found).isPresent();
         assertThat(found.get().getStatus()).isEqualTo(ResearchRun.Status.PENDING);
-        assertThat(found.get().getMode()).isEqualTo(ResearchRun.Mode.GENERAL);
+        assertThat(found.get().getMode()).isEqualTo(ResearchRun.Mode.SCAN);
+        assertThat(found.get().getCampaignMode()).isEqualTo(ResearchRun.CampaignMode.GENERAL);
         assertThat(found.get().getPlatforms()).containsExactly("reddit", "youtube");
     }
 

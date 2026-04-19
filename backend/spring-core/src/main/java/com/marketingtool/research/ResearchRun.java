@@ -27,8 +27,15 @@ public class ResearchRun {
     private UUID workspaceId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Mode mode = Mode.GENERAL;
+    @Column(name = "campaign_mode", nullable = false)
+    private CampaignMode campaignMode = CampaignMode.GENERAL;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode", nullable = false)
+    private Mode mode = Mode.SCAN;
+
+    @Column(name = "idea_description")
+    private String ideaDescription;
 
     @Column(name = "query_text", nullable = false)
     private String queryText;
@@ -63,9 +70,15 @@ public class ResearchRun {
     @PrePersist
     void prePersist() {
         if (createdAt == null) createdAt = Instant.now();
+        if (campaignMode == null) campaignMode = CampaignMode.GENERAL;
+        if (mode == null) mode = Mode.SCAN;
     }
 
     public enum Mode {
+        SCAN, VALIDATE
+    }
+
+    public enum CampaignMode {
         GENERAL, CAMPAIGN
     }
 

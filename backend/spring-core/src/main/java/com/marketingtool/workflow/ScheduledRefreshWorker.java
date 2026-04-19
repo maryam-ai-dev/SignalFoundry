@@ -43,7 +43,9 @@ public class ScheduledRefreshWorker {
                                 refresh.getWorkspaceId(),
                                 topic.getKeyword(),
                                 topic.getPlatforms(),
-                                ResearchRun.Mode.GENERAL,
+                                ResearchRun.CampaignMode.GENERAL,
+                                ResearchRun.Mode.SCAN,
+                                null,
                                 null
                         );
                         dispatched++;

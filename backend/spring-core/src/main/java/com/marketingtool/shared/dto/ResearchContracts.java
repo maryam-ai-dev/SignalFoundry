@@ -11,10 +11,13 @@ public final class ResearchContracts {
         String queryText,
         List<String> platforms,
         String mode,
+        String campaignMode,
+        String ideaDescription,
         GoalContext goalContext
     ) {
         public RunResearchScanRequest {
-            if (mode == null) mode = "GENERAL";
+            if (mode == null) mode = "SCAN";
+            if (campaignMode == null) campaignMode = "GENERAL";
         }
     }
 

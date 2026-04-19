@@ -21,7 +21,18 @@ public class ResearchRunService {
             Set.of(ResearchRun.Status.COMPLETED, ResearchRun.Status.FAILED, ResearchRun.Status.ARCHIVED);
 
     @Transactional
-    public ResearchRun create(UUID workspaceId, String queryText, List<String> platforms, ResearchRun.Mode mode) {
+    public ResearchRun create(UUID workspaceId,
+                              String queryText,
+                              List<String> platforms,
+                              ResearchRun.CampaignMode campaignMode,
+                              ResearchRun.Mode mode,
+                              String ideaDescription) {
+        ResearchRun.Mode effectiveMode = mode != null ? mode : ResearchRun.Mode.SCAN;
+        if (effectiveMode == ResearchRun.Mode.VALIDATE
+                && (ideaDescription == null || ideaDescription.isBlank())) {
+            throw new IllegalArgumentException("ideaDescription is required when mode=VALIDATE");
+        }
+
         boolean duplicate = runRepository.existsByWorkspaceIdAndQueryTextAndStatusInAndCreatedAtAfter(
                 workspaceId, queryText,
                 List.of(ResearchRun.Status.PENDING, ResearchRun.Status.RUNNING),
@@ -36,9 +47,17 @@ public class ResearchRunService {
         run.setWorkspaceId(workspaceId);
         run.setQueryText(queryText);
         run.setPlatforms(platforms);
-        run.setMode(mode);
+        run.setCampaignMode(campaignMode != null ? campaignMode : ResearchRun.CampaignMode.GENERAL);
+        run.setMode(effectiveMode);
+        run.setIdeaDescription(ideaDescription);
         run.setStatus(ResearchRun.Status.PENDING);
         return runRepository.save(run);
+    }
+
+    @Transactional
+    public ResearchRun create(UUID workspaceId, String queryText, List<String> platforms,
+                              ResearchRun.CampaignMode campaignMode) {
+        return create(workspaceId, queryText, platforms, campaignMode, ResearchRun.Mode.SCAN, null);
     }
 
     @Transactional

@@ -25,10 +25,21 @@ public class ResearchRunOrchestrator {
     private final CampaignService campaignService;
 
     @Transactional
-    public ResearchRun startScan(UUID workspaceId, String queryText, List<String> platforms,
-                                  ResearchRun.Mode mode, Map<String, Object> goalContext) {
+    public ResearchRun startScan(UUID workspaceId,
+                                 String queryText,
+                                 List<String> platforms,
+                                 ResearchRun.CampaignMode campaignMode,
+                                 ResearchRun.Mode mode,
+                                 String ideaDescription,
+                                 Map<String, Object> goalContext) {
+        ResearchRun.Mode effectiveMode = mode != null ? mode : ResearchRun.Mode.SCAN;
+        ResearchRun.CampaignMode effectiveCampaignMode =
+                campaignMode != null ? campaignMode : ResearchRun.CampaignMode.GENERAL;
+
         // 1. Create ResearchRun (PENDING)
-        ResearchRun run = researchRunService.create(workspaceId, queryText, platforms, mode);
+        ResearchRun run = researchRunService.create(
+                workspaceId, queryText, platforms,
+                effectiveCampaignMode, effectiveMode, ideaDescription);
 
         // Auto-attach GoalContext from active campaign if none provided
         Map<String, Object> effectiveGoalContext = goalContext;
@@ -53,7 +64,11 @@ public class ResearchRunOrchestrator {
         payload.put("workspace_id", workspaceId.toString());
         payload.put("query_text", queryText);
         payload.put("platforms", platforms);
-        payload.put("mode", mode.name());
+        payload.put("mode", effectiveMode.name());
+        payload.put("campaign_mode", effectiveCampaignMode.name());
+        if (ideaDescription != null) {
+            payload.put("idea_description", ideaDescription);
+        }
         payload.put("research_run_id", run.getId().toString());
         if (effectiveGoalContext != null) {
             payload.put("goal_context", effectiveGoalContext);
