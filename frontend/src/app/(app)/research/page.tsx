@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { apiFetch } from "@/lib/api";
@@ -23,6 +24,15 @@ interface Synthesis {
   recommended_directions: string[];
 }
 
+interface RunHistoryItem {
+  runId: string;
+  status: string;
+  mode?: string;
+  niche?: string;
+  queryText?: string;
+  createdAt?: string;
+}
+
 type ScanMode = "SCAN" | "VALIDATE";
 
 export default function ResearchPage() {
@@ -39,6 +49,18 @@ export default function ResearchPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [synthesis, setSynthesis] = useState<Synthesis | null>(null);
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
+  const [history, setHistory] = useState<RunHistoryItem[]>([]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    apiFetch(`/api/research/runs?workspaceId=${workspaceId}&limit=10`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data)) setHistory(data);
+      })
+      .catch(() => {});
+  }, [workspaceId, runId]);
 
   function togglePlatform(p: string) {
     setSelectedPlatforms((prev) =>
@@ -250,6 +272,29 @@ export default function ResearchPage() {
             onPartialReady={onPartialReady}
             onComplete={onComplete}
           />
+        )}
+
+        {history.length > 0 && (
+          <div className="mt-1 space-y-1">
+            <p className="font-mono text-[9px] uppercase tracking-wider text-[--text-muted]">
+              Recent runs
+            </p>
+            <ul className="space-y-1">
+              {history.slice(0, 10).map((h) => (
+                <li key={h.runId} id={`run-${h.runId}`}>
+                  <Link
+                    href={`/research/runs/${h.runId}`}
+                    className="flex items-center gap-2 truncate rounded-md border border-[--border] bg-[--bg-secondary] px-2 py-1 font-mono text-[10px] text-[--text-secondary] hover:text-white"
+                  >
+                    <span className="truncate">
+                      {h.niche || h.queryText || h.runId.slice(0, 8)}
+                    </span>
+                    <span className="ml-auto text-[--text-muted]">{h.status}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         <button
           onClick={handleRunScan}

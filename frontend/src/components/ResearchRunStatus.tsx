@@ -186,10 +186,12 @@ export default function ResearchRunStatus({
                   </button>
                 )}
               </div>
-              {isExpanded && phase?.detail && (
-                <p className="border-t border-[--border] bg-[--bg-panel] px-3 py-1.5 text-[11px] text-[--text-muted]">
-                  {phase.detail}
-                </p>
+              {isExpanded && (
+                <PhaseDetail
+                  runId={runId}
+                  phaseId={def.id}
+                  detail={phase?.detail}
+                />
               )}
             </li>
           );
@@ -203,6 +205,72 @@ export default function ResearchRunStatus({
       )}
 
       <style>{`@keyframes sf-pulse-dot { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.3); } }`}</style>
+    </div>
+  );
+}
+
+interface PhaseSource {
+  url?: string;
+  label?: string;
+  kind?: string;
+}
+
+function PhaseDetail({
+  runId,
+  phaseId,
+  detail,
+}: {
+  runId: string;
+  phaseId: string;
+  detail?: string;
+}) {
+  const [sources, setSources] = useState<PhaseSource[] | null>(null);
+  const [fetched, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (fetched) return;
+    setFetched(true);
+    apiFetch(`/api/research/runs/${runId}/phase-sources?phase=${phaseId}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data)) setSources(data.slice(0, 10));
+      })
+      .catch(() => {});
+  }, [runId, phaseId, fetched]);
+
+  const hasSources = sources && sources.length > 0;
+
+  return (
+    <div className="border-t border-[--border] bg-[--bg-panel] px-3 py-2 space-y-2">
+      {detail && <p className="text-[11px] text-[--text-muted]">{detail}</p>}
+      <p className="font-mono text-[9px] uppercase tracking-wider text-[--text-muted]">
+        What I looked at
+      </p>
+      {hasSources ? (
+        <ul className="space-y-1">
+          {sources!.map((s, i) => (
+            <li key={i} className="font-mono text-[10px] text-[--text-secondary]">
+              {s.url ? (
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white hover:underline"
+                >
+                  {s.label || s.url}
+                </a>
+              ) : (
+                <span>{s.label || s.kind || "source"}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="font-mono text-[10px] text-[--text-muted]">
+          Sources not recorded
+        </p>
+      )}
     </div>
   );
 }
