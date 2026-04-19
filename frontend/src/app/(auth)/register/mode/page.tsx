@@ -25,7 +25,7 @@ export default function ModeSelectionPage() {
     } catch {
       // Swallow — mode is already in localStorage via setAccountMode. Retry later.
     }
-    router.push("/setup");
+    router.push("/register/digest");
   }
 
   if (!authenticated) return null;
@@ -65,7 +65,7 @@ export default function ModeSelectionPage() {
           title={!mode ? "Select a mode to continue" : undefined}
           className="rounded-md bg-[--primary] px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Saving..." : "Continue to niche setup →"}
+          {submitting ? "Saving..." : "Continue →"}
         </button>
       </div>
 
