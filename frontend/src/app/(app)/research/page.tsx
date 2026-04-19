@@ -23,11 +23,16 @@ interface Synthesis {
   recommended_directions: string[];
 }
 
+type ScanMode = "SCAN" | "VALIDATE";
+
 export default function ResearchPage() {
   const { authenticated } = useRequireAuth();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
+  const accountMode = useWorkspaceStore((s) => s.accountMode);
   const [query, setQuery] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["reddit"]);
+  const [mode, setMode] = useState<ScanMode>(accountMode === "INVESTOR" ? "VALIDATE" : "SCAN");
+  const [ideaDescription, setIdeaDescription] = useState("");
   const [runId, setRunId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
@@ -43,6 +48,10 @@ export default function ResearchPage() {
 
   async function handleRunScan() {
     if (!workspaceId || !query.trim()) return;
+    if (mode === "VALIDATE" && !ideaDescription.trim()) {
+      setError("Describe your idea before validating.");
+      return;
+    }
     setError("");
     setScanning(true);
     setInsights([]);
@@ -53,9 +62,11 @@ export default function ResearchPage() {
         method: "POST",
         body: JSON.stringify({
           workspaceId,
+          niche: query.trim(),
           queryText: query.trim(),
           platforms: selectedPlatforms,
-          mode: "GENERAL",
+          mode,
+          ideaDescription: mode === "VALIDATE" ? ideaDescription.trim() : undefined,
         }),
       });
       const data = await res.json();
@@ -163,6 +174,32 @@ export default function ResearchPage() {
       {/* Left — Search Panel */}
       <div className="w-[22%] flex flex-col gap-4 rounded-lg border border-[--border] bg-[--bg-panel] p-4">
         <h2 className="text-sm font-semibold text-white">New Scan</h2>
+
+        <div className="flex rounded-full border border-[--border] bg-[--bg-secondary] p-0.5 text-[11px] font-medium">
+          <button
+            type="button"
+            onClick={() => setMode("SCAN")}
+            className={`flex-1 rounded-full px-3 py-1.5 transition-colors ${
+              mode === "SCAN"
+                ? "bg-[--bg-panel] text-white"
+                : "text-[--text-muted] hover:text-[--text-secondary]"
+            }`}
+          >
+            Scan niche
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("VALIDATE")}
+            className={`flex-1 rounded-full px-3 py-1.5 transition-colors ${
+              mode === "VALIDATE"
+                ? "bg-[--bg-panel] text-white"
+                : "text-[--text-muted] hover:text-[--text-secondary]"
+            }`}
+          >
+            Validate an idea
+          </button>
+        </div>
+
         <input
           type="text"
           placeholder="What do you want to research?"
@@ -171,6 +208,24 @@ export default function ResearchPage() {
           onKeyDown={(e) => e.key === "Enter" && handleRunScan()}
           className="w-full rounded-md border border-[--border] bg-[--bg-secondary] px-3 py-2 text-sm text-white placeholder:text-[--text-muted] focus:outline-none focus:ring-1 focus:ring-[--ring]"
         />
+
+        {mode === "VALIDATE" && (
+          <div className="space-y-1">
+            <textarea
+              value={ideaDescription}
+              onChange={(e) => setIdeaDescription(e.target.value.slice(0, 280))}
+              rows={3}
+              placeholder="Describe your idea in one sentence"
+              className="w-full rounded-md border border-[--border] bg-[--bg-secondary] px-3 py-2 text-sm text-white placeholder:text-[--text-muted] focus:outline-none focus:ring-1 focus:ring-[--ring]"
+            />
+            <div className="flex justify-between font-mono text-[10px] text-[--text-muted]">
+              <span>
+                {ideaDescription.trim().length === 0 && "Required for validate"}
+              </span>
+              <span>{ideaDescription.length}/280</span>
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           <p className="text-xs font-medium text-[--text-secondary]">Platforms</p>
           {PLATFORMS.map((p) => (
@@ -193,10 +248,15 @@ export default function ResearchPage() {
         )}
         <button
           onClick={handleRunScan}
-          disabled={!query.trim() || selectedPlatforms.length === 0 || scanning}
+          disabled={
+            !query.trim() ||
+            selectedPlatforms.length === 0 ||
+            scanning ||
+            (mode === "VALIDATE" && !ideaDescription.trim())
+          }
           className="mt-auto w-full rounded-md bg-[--primary] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {scanning ? "Scanning..." : "Run Scan"}
+          {scanning ? "Scanning..." : mode === "VALIDATE" ? "Validate idea" : "Run Scan"}
         </button>
       </div>
 
