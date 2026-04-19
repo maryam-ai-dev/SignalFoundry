@@ -53,7 +53,7 @@ public class AuthController {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("userId", user.getId());
         body.put("accountMode", user.getAccountMode());
-        body.put("digestDay", null);
+        body.put("digestDay", user.getDigestDay());
         body.put("workspaceIds", workspaceIds);
         return body;
     }

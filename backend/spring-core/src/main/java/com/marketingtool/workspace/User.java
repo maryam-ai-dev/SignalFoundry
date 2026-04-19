@@ -1,5 +1,6 @@
 package com.marketingtool.workspace;
 
+import com.marketingtool.account.DigestDay;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,10 @@ public class User {
     @Column(name = "account_mode", nullable = false)
     private AccountMode accountMode = AccountMode.FOUNDER;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "digest_day", nullable = false, length = 3)
+    private DigestDay digestDay = DigestDay.MON;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -41,6 +46,9 @@ public class User {
         }
         if (accountMode == null) {
             accountMode = AccountMode.FOUNDER;
+        }
+        if (digestDay == null) {
+            digestDay = DigestDay.MON;
         }
     }
 }
