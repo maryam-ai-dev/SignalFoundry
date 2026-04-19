@@ -7,10 +7,12 @@ import { apiFetch } from "@/lib/api";
 import MigrationBanner from "@/components/MigrationBanner";
 import InterestStrip from "@/components/InterestStrip";
 import SignalOfTheDay, { type Signal } from "@/components/SignalOfTheDay";
+import HooksRow, { type QueuedHook } from "@/components/HooksRow";
+import OpportunitiesList, { type Opportunity } from "@/components/OpportunitiesList";
+import DigestNudge from "@/components/DigestNudge";
+import WhatMovedStrip, { type MovedDeltas } from "@/components/WhatMovedStrip";
 
 type Insight = Signal;
-interface HookItem { hookId?: string; id?: string; text: string; voiceMatch?: number; status?: string }
-interface Opportunity { id?: string; platform: string; postSummary: string; relevanceScore: number }
 interface ResearchRun { runId: string; status: string; niche?: string }
 
 type Section<T> = { data: T | null; loading: boolean; error: string | null };
@@ -24,9 +26,10 @@ export default function TodayPage() {
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const workspace = useWorkspaceStore((s) => s.workspace);
   const [signals, setSignals] = useState<Section<Insight[]>>(initial());
-  const [hooks, setHooks] = useState<Section<HookItem[]>>(initial());
+  const [hooks, setHooks] = useState<Section<QueuedHook[]>>(initial());
   const [opportunities, setOpportunities] = useState<Section<Opportunity[]>>(initial());
   const [runs, setRuns] = useState<Section<ResearchRun[]>>(initial());
+  const [deltas, setDeltas] = useState<MovedDeltas | null>(null);
   const [autoScanStarted, setAutoScanStarted] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
 
@@ -50,7 +53,7 @@ export default function TodayPage() {
         (data) => setSignals({ data, loading: false, error: null }),
         (e) => setSignals({ data: null, loading: false, error: (e as Error).message })
       ),
-      fetchJson<HookItem[]>(
+      fetchJson<QueuedHook[]>(
         `/api/strategy/hooks?workspaceId=${workspaceId}&status=QUEUED&limit=3`
       ).then(
         (data) => setHooks({ data, loading: false, error: null }),
@@ -67,6 +70,12 @@ export default function TodayPage() {
       ).then(
         (data) => setRuns({ data, loading: false, error: null }),
         (e) => setRuns({ data: null, loading: false, error: (e as Error).message })
+      ),
+      fetchJson<MovedDeltas>(
+        `/api/insights/deltas?workspaceId=${workspaceId}&window=7d`
+      ).then(
+        (data) => setDeltas(data),
+        () => setDeltas(null)
       ),
     ]);
   }
@@ -88,9 +97,7 @@ export default function TodayPage() {
       apiFetch("/api/research/runs", {
         method: "POST",
         body: JSON.stringify({ workspaceId, niche, mode: "SCAN" }),
-      }).catch(() => {
-        // Silent failure — pill is best-effort.
-      });
+      }).catch(() => {});
     }
   }, [runs, workspaceId, workspace, autoScanStarted]);
 
@@ -127,66 +134,16 @@ export default function TodayPage() {
       </Section>
 
       <Section title="Hooks ready to ship" state={hooks} onRetry={load}>
-        {(data) =>
-          data && data.length > 0 ? (
-            <ul className="grid grid-cols-3 gap-3">
-              {data.map((h, i) => (
-                <li
-                  key={h.hookId || h.id || i}
-                  className="rounded-lg border border-[--border] bg-[--bg-secondary] p-3 text-xs text-[--text-secondary]"
-                >
-                  {h.text}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-[--text-muted]">No hooks queued.</p>
-          )
-        }
+        {(data) => <HooksRow hooks={data} />}
       </Section>
 
       <Section title="Comment opportunities" state={opportunities} onRetry={load}>
-        {(data) =>
-          data && data.length > 0 ? (
-            <ul className="space-y-2">
-              {data.slice(0, 5).map((o, i) => (
-                <li
-                  key={o.id || i}
-                  className="flex items-center gap-3 rounded-md border border-[--border] bg-[--bg-panel] px-3 py-2"
-                >
-                  <span className="rounded bg-blue-500/20 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-blue-400">
-                    {o.platform}
-                  </span>
-                  <span className="flex-1 truncate text-xs text-[--text-secondary]">
-                    {o.postSummary}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-[--text-muted]">No open opportunities.</p>
-          )
-        }
+        {(data) => <OpportunitiesList items={data} />}
       </Section>
 
-      <Section title="Recent runs" state={runs} onRetry={load}>
-        {(data) =>
-          data && data.length > 0 ? (
-            <ul className="flex flex-wrap gap-2">
-              {data.map((r) => (
-                <li
-                  key={r.runId}
-                  className="rounded-md border border-[--border] bg-[--bg-panel] px-3 py-1 font-mono text-[10px] text-[--text-secondary]"
-                >
-                  {r.niche || r.runId.slice(0, 8)} · {r.status}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-[--text-muted]">No runs yet.</p>
-          )
-        }
-      </Section>
+      <DigestNudge />
+
+      <WhatMovedStrip deltas={deltas} />
     </div>
   );
 }
