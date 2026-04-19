@@ -31,7 +31,10 @@ interface HookSlotCardProps {
   onRemove: (id: string) => void;
   regenerate: (locked: Record<SlotName, boolean>, card: HookCardData) => Promise<HookCardData | null>;
   onToast: (msg: string) => void;
-  onShip?: (card: HookCardData) => void;
+  onSaved?: (card: HookCardData) => void;
+  onShipped?: (card: HookCardData) => void;
+  onArchived?: (card: HookCardData) => void;
+  onDirtyChange?: (id: string, dirty: boolean) => void;
 }
 
 function voiceLine(card: HookCardData): { text: string; color: string } {
@@ -55,7 +58,10 @@ export default function HookSlotCard({
   onRemove,
   regenerate,
   onToast,
-  onShip,
+  onSaved,
+  onShipped,
+  onArchived,
+  onDirtyChange,
 }: HookSlotCardProps) {
   const [locks, setLocks] = useState<Record<SlotName, boolean>>({
     angle: false,
@@ -66,6 +72,16 @@ export default function HookSlotCard({
   const [saved, setSaved] = useState(false);
   const [archived, setArchived] = useState(false);
   const [hovered, setHovered] = useState(false);
+
+  const markDirty = (v: boolean) => {
+    onDirtyChange?.(card.id, v);
+  };
+
+  useEffect(() => {
+    return () => {
+      onDirtyChange?.(card.id, false);
+    };
+  }, [card.id, onDirtyChange]);
 
   useEffect(() => {
     if (!saved) return;
@@ -97,6 +113,7 @@ export default function HookSlotCard({
           merged.slots[slot] = locks[slot] ? card.slots[slot] : next.slots[slot];
         }
         onChange(merged);
+        markDirty(true);
       } else {
         onToast("Regenerate failed — card preserved.");
       }
@@ -108,24 +125,40 @@ export default function HookSlotCard({
   async function save() {
     try {
       const text = SLOT_ORDER.map((s) => card.slots[s]).filter(Boolean).join("\n\n");
-      await apiFetch("/api/swipe-file", {
+      const res = await apiFetch("/api/swipe-file", {
         method: "POST",
         body: JSON.stringify({
           type: "HOOK",
           content: { text, hookId: card.id, slots: card.slots },
         }),
       });
+      if (!res.ok) throw new Error("save failed");
       setSaved(true);
+      markDirty(false);
+      onSaved?.(card);
     } catch {
       onToast("Save failed");
     }
   }
 
-  function ship() {
+  async function ship() {
     const text = SLOT_ORDER.map((s) => card.slots[s]).filter(Boolean).join("\n\n");
     const url = `https://typefully.com/compose?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
-    onShip?.(card);
+    try {
+      await apiFetch("/api/swipe-file", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "HOOK",
+          status: "SHIPPED",
+          content: { text, hookId: card.id, slots: card.slots },
+        }),
+      });
+    } catch {
+      // best-effort — local shipped record still kept by caller
+    }
+    markDirty(false);
+    onShipped?.(card);
   }
 
   function toNotion() {
@@ -136,6 +169,8 @@ export default function HookSlotCard({
 
   function archive() {
     setArchived(true);
+    markDirty(false);
+    onArchived?.(card);
     onRemove(card.id);
   }
 
@@ -162,9 +197,10 @@ export default function HookSlotCard({
             locked={locks[slot]}
             value={card.slots[slot]}
             onToggleLock={() => toggleLock(slot)}
-            onChangeValue={(v) =>
-              onChange({ ...card, slots: { ...card.slots, [slot]: v } })
-            }
+            onChangeValue={(v) => {
+              onChange({ ...card, slots: { ...card.slots, [slot]: v } });
+              markDirty(true);
+            }}
           />
         ))}
       </div>

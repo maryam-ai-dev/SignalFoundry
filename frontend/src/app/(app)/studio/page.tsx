@@ -14,6 +14,11 @@ import VoicePanel, {
   DEFAULT_SLIDERS,
   type VoiceSliders,
 } from "@/components/VoicePanel";
+import {
+  addArchivedHook,
+  addShippedHook,
+  readArchivedHooks,
+} from "@/lib/hookSession";
 
 interface ContextData {
   signalId: string | null;
@@ -296,10 +301,6 @@ function responseToCard(r: HookGenResponse, fallbackId: string): HookCardData {
   };
 }
 
-function cardsEqualBySignature(cards: HookCardData[]): string {
-  return cards.map((c) => c.id).join(",");
-}
-
 function HookSessionBody({
   workspaceId,
   topic,
@@ -314,7 +315,8 @@ function HookSessionBody({
   const [cards, setCards] = useState<HookCardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
-  const lastSignatureRef = useRef<string>("");
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  const archivedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!toast) return;
@@ -325,12 +327,52 @@ function HookSessionBody({
   const initialRequested = useRef(false);
 
   useEffect(() => {
+    archivedRef.current = new Set(readArchivedHooks(topic));
+  }, [topic]);
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (dirtyIds.size === 0) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirtyIds]);
+
+  useEffect(() => {
     if (initialRequested.current) return;
     if (!workspaceId || (!topic && !signalId)) return;
     initialRequested.current = true;
     void loadInitial();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, topic, signalId]);
+
+  function filterArchived(list: HookCardData[]): HookCardData[] {
+    return list.filter((c) => !archivedRef.current.has(c.id));
+  }
+
+  function handleDirtyChange(id: string, dirty: boolean) {
+    setDirtyIds((prev) => {
+      const next = new Set(prev);
+      if (dirty) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function handleSaved() {
+    // save handled by card; nothing extra beyond clearing dirty.
+  }
+
+  function handleShipped(card: HookCardData) {
+    addShippedHook(topic, card.id);
+  }
+
+  function handleArchived(card: HookCardData) {
+    archivedRef.current.add(card.id);
+    addArchivedHook(topic, card.id);
+  }
 
   async function loadInitial() {
     setLoading(true);
@@ -342,11 +384,12 @@ function HookSessionBody({
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const next = data
-            .slice(0, 3)
-            .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-${i}`));
+          const next = filterArchived(
+            data
+              .slice(0, 3)
+              .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-${i}`))
+          );
           setCards(next.length > 0 ? next : [newBlankCard(`hook-${Date.now()}-0`), newBlankCard(`hook-${Date.now()}-1`), newBlankCard(`hook-${Date.now()}-2`)]);
-          lastSignatureRef.current = cardsEqualBySignature(next);
           return;
         }
       }
@@ -397,9 +440,11 @@ function HookSessionBody({
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const next = data
-            .slice(0, 3)
-            .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-m${i}`));
+          const next = filterArchived(
+            data
+              .slice(0, 3)
+              .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-m${i}`))
+          );
           setCards((prev) => [...prev, ...next]);
           return;
         }
@@ -447,6 +492,10 @@ function HookSessionBody({
             onRemove={removeCard}
             regenerate={regenerateCard}
             onToast={setToast}
+            onDirtyChange={handleDirtyChange}
+            onSaved={handleSaved}
+            onShipped={handleShipped}
+            onArchived={handleArchived}
           />
         ))}
       </div>
