@@ -27,6 +27,10 @@ public class User {
 
     private String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_mode", nullable = false)
+    private AccountMode accountMode = AccountMode.FOUNDER;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -34,6 +38,9 @@ public class User {
     void prePersist() {
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (accountMode == null) {
+            accountMode = AccountMode.FOUNDER;
         }
     }
 }
