@@ -56,6 +56,27 @@ function StudioBody() {
   });
   const [topicDraft, setTopicDraft] = useState("");
   const [sliders, setSliders] = useState<VoiceSliders>(DEFAULT_SLIDERS);
+  const [activeCampaign, setActiveCampaign] = useState<{
+    name: string;
+    goalType?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    apiFetch(`/api/campaigns?workspaceId=${workspaceId}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        const active = data.find((c) => c.status === "ACTIVE");
+        if (active) {
+          setActiveCampaign({ name: active.name, goalType: active.goalType });
+        } else {
+          setActiveCampaign(null);
+        }
+      })
+      .catch(() => {});
+  }, [workspaceId]);
 
   const isInvestor = accountMode === "INVESTOR";
 
@@ -258,6 +279,7 @@ function StudioBody() {
             topic={context.topic || context.summary}
             signalId={context.signalId}
             sliders={sliders}
+            campaign={activeCampaign}
           />
         ) : (
           <p className="text-xs text-[--text-muted]">
@@ -326,11 +348,13 @@ function HookSessionBody({
   topic,
   signalId,
   sliders,
+  campaign,
 }: {
   workspaceId: string | null;
   topic: string | null;
   signalId: string | null;
   sliders: VoiceSliders;
+  campaign: { name: string; goalType?: string } | null;
 }) {
   const [cards, setCards] = useState<HookCardData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -399,7 +423,15 @@ function HookSessionBody({
     try {
       const res = await apiFetch("/api/strategy/hooks", {
         method: "POST",
-        body: JSON.stringify({ workspaceId, topic, signalId, count: 3, sliders }),
+        body: JSON.stringify({
+          workspaceId,
+          topic,
+          signalId,
+          count: 3,
+          sliders,
+          campaignGoal: campaign?.goalType,
+          campaignName: campaign?.name,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -437,6 +469,8 @@ function HookSessionBody({
           locked,
           existing: card.slots,
           sliders,
+          campaignGoal: campaign?.goalType,
+          campaignName: campaign?.name,
         }),
       });
       if (!res.ok) return null;
@@ -455,7 +489,15 @@ function HookSessionBody({
     try {
       const res = await apiFetch("/api/strategy/hooks", {
         method: "POST",
-        body: JSON.stringify({ workspaceId, topic, signalId, count: 3, sliders }),
+        body: JSON.stringify({
+          workspaceId,
+          topic,
+          signalId,
+          count: 3,
+          sliders,
+          campaignGoal: campaign?.goalType,
+          campaignName: campaign?.name,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
