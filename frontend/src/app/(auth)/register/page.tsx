@@ -30,7 +30,7 @@ export default function RegisterPage() {
       }
       const payload = JSON.parse(atob(data.token.split(".")[1]));
       setAuth(data.token, payload.sub);
-      router.push("/setup");
+      router.push("/register/mode");
     } catch {
       setError("Network error");
     } finally {
