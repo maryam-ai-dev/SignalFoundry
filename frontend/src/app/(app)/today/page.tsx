@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { apiFetch } from "@/lib/api";
+import MigrationBanner from "@/components/MigrationBanner";
 
 interface Insight { type: string; payload: Record<string, unknown>; confidence: number }
 interface HookItem { hookId?: string; id?: string; text: string; voiceMatch?: number; status?: string }
@@ -93,6 +94,7 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-6">
+      <MigrationBanner />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-white">Today</h1>
         {gathering && (
