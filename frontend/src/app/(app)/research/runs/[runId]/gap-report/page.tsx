@@ -7,6 +7,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { apiFetch } from "@/lib/api";
 import type { GapReport } from "@/components/gapReport/types";
 import VerdictBox from "@/components/gapReport/VerdictBox";
+import ReportFolds from "@/components/gapReport/ReportFolds";
 
 interface RunMeta {
   runId: string;
@@ -121,7 +122,12 @@ export default function GapReportPage({
           Scoring novelty — this report is still being generated.
         </p>
       )}
-      {state.kind === "ready" && <VerdictBox report={state.report} />}
+      {state.kind === "ready" && (
+        <>
+          <VerdictBox report={state.report} />
+          <ReportFolds report={state.report} />
+        </>
+      )}
     </div>
   );
 }
