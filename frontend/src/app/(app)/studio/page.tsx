@@ -1,10 +1,15 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { apiFetch } from "@/lib/api";
+import HookSlotCard, {
+  newBlankCard,
+  type HookCardData,
+  type SlotName,
+} from "@/components/HookSlotCard";
 
 interface ContextData {
   signalId: string | null;
@@ -217,7 +222,17 @@ function StudioBody() {
         <h2 className="mb-4 font-mono text-[10px] uppercase tracking-wide text-[--text-muted]">
           Hooks
         </h2>
-        <HookCardsPlaceholder hasContext={hasContext} />
+        {hasContext ? (
+          <HookSessionBody
+            workspaceId={workspaceId}
+            topic={context.topic || context.summary}
+            signalId={context.signalId}
+          />
+        ) : (
+          <p className="text-xs text-[--text-muted]">
+            Pick a context or enter a topic to start generating hooks.
+          </p>
+        )}
       </section>
 
       {/* Voice pane — FOUNDER only */}
@@ -240,18 +255,197 @@ function StudioSkeleton() {
   );
 }
 
-function HookCardsPlaceholder({ hasContext }: { hasContext: boolean }) {
-  if (!hasContext) {
+interface HookGenResponse {
+  hookId?: string;
+  id?: string;
+  angle?: string;
+  opener?: string;
+  proof?: string;
+  voiceMatch?: number;
+  voiceRef?: string;
+  draft?: boolean;
+  text?: string;
+}
+
+function responseToCard(r: HookGenResponse, fallbackId: string): HookCardData {
+  const id = r.hookId || r.id || fallbackId;
+  const slots: Record<SlotName, string> = {
+    angle: r.angle || "",
+    opener: r.opener || "",
+    proof: r.proof || "",
+  };
+  if (!slots.opener && r.text) {
+    slots.opener = r.text;
+  }
+  return {
+    id,
+    slots,
+    voiceMatch: typeof r.voiceMatch === "number" ? r.voiceMatch : null,
+    voiceRef: r.voiceRef || null,
+    draft: r.draft ?? false,
+  };
+}
+
+function cardsEqualBySignature(cards: HookCardData[]): string {
+  return cards.map((c) => c.id).join(",");
+}
+
+function HookSessionBody({
+  workspaceId,
+  topic,
+  signalId,
+}: {
+  workspaceId: string | null;
+  topic: string | null;
+  signalId: string | null;
+}) {
+  const [cards, setCards] = useState<HookCardData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState("");
+  const lastSignatureRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const initialRequested = useRef(false);
+
+  useEffect(() => {
+    if (initialRequested.current) return;
+    if (!workspaceId || (!topic && !signalId)) return;
+    initialRequested.current = true;
+    void loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, topic, signalId]);
+
+  async function loadInitial() {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/strategy/hooks", {
+        method: "POST",
+        body: JSON.stringify({ workspaceId, topic, signalId, count: 3 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const next = data
+            .slice(0, 3)
+            .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-${i}`));
+          setCards(next.length > 0 ? next : [newBlankCard(`hook-${Date.now()}-0`), newBlankCard(`hook-${Date.now()}-1`), newBlankCard(`hook-${Date.now()}-2`)]);
+          lastSignatureRef.current = cardsEqualBySignature(next);
+          return;
+        }
+      }
+    } catch {}
+    // Fallback: show blank cards for manual work.
+    setCards([
+      newBlankCard(`hook-${Date.now()}-0`),
+      newBlankCard(`hook-${Date.now()}-1`),
+      newBlankCard(`hook-${Date.now()}-2`),
+    ]);
+    setLoading(false);
+  }
+
+  async function regenerateCard(
+    locked: Record<SlotName, boolean>,
+    card: HookCardData
+  ): Promise<HookCardData | null> {
+    try {
+      const res = await apiFetch(`/api/strategy/hooks/${card.id}/regenerate`, {
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId,
+          topic,
+          signalId,
+          locked,
+          existing: card.slots,
+        }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const response: HookGenResponse = Array.isArray(data) ? data[0] : data;
+      if (!response) return null;
+      return responseToCard(response, card.id);
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadMore() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/strategy/hooks", {
+        method: "POST",
+        body: JSON.stringify({ workspaceId, topic, signalId, count: 3 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const next = data
+            .slice(0, 3)
+            .map((r: HookGenResponse, i: number) => responseToCard(r, `hook-${Date.now()}-m${i}`));
+          setCards((prev) => [...prev, ...next]);
+          return;
+        }
+      }
+      setCards((prev) => [
+        ...prev,
+        newBlankCard(`hook-${Date.now()}-m0`),
+        newBlankCard(`hook-${Date.now()}-m1`),
+        newBlankCard(`hook-${Date.now()}-m2`),
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function updateCard(next: HookCardData) {
+    setCards((prev) => prev.map((c) => (c.id === next.id ? next : c)));
+  }
+
+  function removeCard(id: string) {
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  if (!workspaceId || (!topic && !signalId)) {
     return (
       <p className="text-xs text-[--text-muted]">
-        Pick a context to start generating hooks.
+        Pick a context or enter a topic to start generating hooks.
       </p>
     );
   }
+
   return (
-    <p className="text-xs text-[--text-muted]">
-      Hook cards arrive in the next sprint.
-    </p>
+    <div className="space-y-4">
+      {toast && (
+        <p className="rounded-md bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-200">
+          {toast}
+        </p>
+      )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {cards.map((card) => (
+          <HookSlotCard
+            key={card.id}
+            card={card}
+            onChange={updateCard}
+            onRemove={removeCard}
+            regenerate={regenerateCard}
+            onToast={setToast}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={loadMore}
+        disabled={loading}
+        className="rounded-md border border-[--border] bg-[--bg-secondary] px-3 py-1.5 text-[11px] text-[--text-secondary] hover:text-white disabled:opacity-50"
+      >
+        {loading ? "Loading…" : "+3 more"}
+      </button>
+    </div>
   );
 }
 
